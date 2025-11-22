@@ -1,0 +1,56 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Large data files (DON'T upload to GitHub!)
+data/*.csv
+data/*.txt
+*.npy
+
+# Large model files
+models/*.pkl
+*.pkl
+
+# Output files (generate locally)
+outputs/*.csv
+outputs/*.txt
+
+# Visualizations (generate locally)
+visualizations/*.png
+visualizations/*.jpg
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+
+# But KEEP the folder structure!
+# (Create empty .gitkeep files in folders)
+!data/.gitkeep
+!models/.gitkeep
+!outputs/.gitkeep
+!processed_data/.gitkeep
+!visualizations/.gitkeep
