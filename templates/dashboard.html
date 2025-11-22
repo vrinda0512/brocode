@@ -367,6 +367,527 @@
             <div id="historyPagination" class="mt-3 text-center" style="display:none;"></div>
         </div>
 
+<!-- ... existing code ... -->
+
+        <!-- FEATURE 4: Alert System -->
+        <div class="stat-card mt-4">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-6">
+                    <h4 class="mb-0">🔔 Alert System Configuration</h4>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-sm btn-outline-success" onclick="loadAlertConfig()">
+                        🔄 Refresh Config
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="sendTestAlert()">
+                        📧 Send Test Alert
+                    </button>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">⚙️ Alert Settings</h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="emailEnabled">
+                                    <label class="form-check-label" for="emailEnabled">
+                                        <strong>Enable Email Alerts</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted">Turn on to receive email notifications for high-risk transactions</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="alertEmail" class="form-label">Alert Email Address</label>
+                                <input type="email" class="form-control" id="alertEmail" placeholder="security@example.com">
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6>Risk Thresholds</h6>
+                            <div class="mb-3">
+                                <label for="thresholdCritical" class="form-label">
+                                    🚨 Critical Alert Threshold: <span id="criticalValue">90</span>
+                                </label>
+                                <input type="range" class="form-range" id="thresholdCritical" min="50" max="100" value="90" 
+                                       oninput="document.getElementById('criticalValue').textContent = this.value">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="thresholdHigh" class="form-label">
+                                    ⚠️ High Risk Threshold: <span id="highValue">75</span>
+                                </label>
+                                <input type="range" class="form-range" id="thresholdHigh" min="50" max="100" value="75"
+                                       oninput="document.getElementById('highValue').textContent = this.value">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="thresholdMedium" class="form-label">
+                                    ⚡ Medium Risk Threshold: <span id="mediumValue">50</span>
+                                </label>
+                                <input type="range" class="form-range" id="thresholdMedium" min="25" max="75" value="50"
+                                       oninput="document.getElementById('mediumValue').textContent = this.value">
+                            </div>
+                            
+                            <button class="btn btn-primary w-100" onclick="saveAlertConfig()">
+                                💾 Save Configuration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">📊 Alert Statistics</h6>
+                            <div id="alertStats">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary"></div>
+                                    <p class="mt-2 text-muted">Loading statistics...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h6 class="card-title">📜 Recent Alerts</h6>
+                            <div id="recentAlerts" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary"></div>
+                                    <p class="mt-2 text-muted">Loading alerts...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+<!-- ANALYTICS DASHBOARD -->
+<div class="stat-card mt-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h4 class="mb-0">📊 Advanced Analytics Dashboard</h4>
+            <small class="text-muted">Real-time insights from your transaction analysis</small>
+        </div>
+        <div class="col-md-6 text-end">
+            <button onclick="refreshAnalytics()" class="btn btn-primary btn-sm">
+                🔄 Refresh Analytics
+            </button>
+        </div>
+    </div>
+    
+    <!-- Row 1: Trend Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <h6 class="text-center mb-3">📈 Risk Trend (Last 7 Days)</h6>
+                <canvas id="riskTrendChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <h6 class="text-center mb-3">📉 Alert Timeline (Last 7 Days)</h6>
+                <canvas id="alertTimelineChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Volume & Patterns -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <h6 class="text-center mb-3">💰 Risk by Transaction Volume</h6>
+                <canvas id="volumeAnalysisChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <h6 class="text-center mb-3">🔥 Top Fraud Patterns Detected</h6>
+                <canvas id="topPatternsChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Heatmap & Accuracy -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <h6 class="text-center mb-3">⏰ Risk Heatmap by Hour</h6>
+                <canvas id="hourlyHeatmapChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <h6 class="text-center mb-3">🎯 Model Performance</h6>
+                <div id="accuracyMetrics" style="text-align: center; min-height: 300px;">
+                    <div class="spinner-border text-primary mt-5" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- END ANALYTICS DASHBOARD -->
+
+<script>
+// ============================================
+// ANALYTICS DASHBOARD FUNCTIONS
+// ============================================
+
+let riskTrendChart, alertTimelineChart, volumeAnalysisChart, topPatternsChart, hourlyHeatmapChart;
+
+// Load all analytics
+async function loadAnalytics() {
+    try {
+        await Promise.all([
+            loadRiskTrend(),
+            loadAlertTimeline(),
+            loadVolumeAnalysis(),
+            loadTopPatterns(),
+            loadHourlyHeatmap(),
+            loadAccuracyMetrics()
+        ]);
+        console.log('✅ Analytics loaded successfully');
+    } catch (error) {
+        console.error('❌ Error loading analytics:', error);
+    }
+}
+
+// Risk Trend Chart
+async function loadRiskTrend() {
+    try {
+        const response = await fetch('/api/analytics/risk-trend');
+        const data = await response.json();
+        
+        if (data.success) {
+            const ctx = document.getElementById('riskTrendChart').getContext('2d');
+            
+            if (riskTrendChart) riskTrendChart.destroy();
+            
+            riskTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.data.map(d => d.date),
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: data.data.map(d => d.avg_risk),
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Transaction Count',
+                        data: data.data.map(d => d.count),
+                        borderColor: '#4dabf7',
+                        backgroundColor: 'rgba(77, 171, 247, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Risk Score' }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            position: 'right',
+                            title: { display: true, text: 'Count' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading risk trend:', error);
+    }
+}
+
+// Alert Timeline Chart
+async function loadAlertTimeline() {
+    try {
+        const response = await fetch('/api/analytics/alert-timeline');
+        const data = await response.json();
+        
+        if (data.success) {
+            const ctx = document.getElementById('alertTimelineChart').getContext('2d');
+            
+            if (alertTimelineChart) alertTimelineChart.destroy();
+            
+            alertTimelineChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.data.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Critical',
+                            data: data.data.map(d => d.critical),
+                            backgroundColor: '#ff6b6b'
+                        },
+                        {
+                            label: 'High',
+                            data: data.data.map(d => d.high),
+                            backgroundColor: '#ffa94d'
+                        },
+                        {
+                            label: 'Medium',
+                            data: data.data.map(d => d.medium),
+                            backgroundColor: '#ffd43b'
+                        },
+                        {
+                            label: 'Low',
+                            data: data.data.map(d => d.low),
+                            backgroundColor: '#4dabf7'
+                        },
+                        {
+                            label: 'Normal',
+                            data: data.data.map(d => d.normal),
+                            backgroundColor: '#51cf66'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading alert timeline:', error);
+    }
+}
+
+// Volume Analysis Chart
+async function loadVolumeAnalysis() {
+    try {
+        const response = await fetch('/api/analytics/volume-analysis');
+        const data = await response.json();
+        
+        if (data.success) {
+            const ctx = document.getElementById('volumeAnalysisChart').getContext('2d');
+            
+            if (volumeAnalysisChart) volumeAnalysisChart.destroy();
+            
+            volumeAnalysisChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.data.map(d => d.label),
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: data.data.map(d => d.avg_risk),
+                        backgroundColor: [
+                            '#51cf66',
+                            '#4dabf7',
+                            '#ffd43b',
+                            '#ffa94d',
+                            '#ff6b6b'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading volume analysis:', error);
+    }
+}
+
+// Top Patterns Chart
+async function loadTopPatterns() {
+    try {
+        const response = await fetch('/api/analytics/top-patterns');
+        const data = await response.json();
+        
+        if (data.success) {
+            const ctx = document.getElementById('topPatternsChart').getContext('2d');
+            
+            if (topPatternsChart) topPatternsChart.destroy();
+            
+            topPatternsChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.data.map(d => d.pattern),
+                    datasets: [{
+                        data: data.data.map(d => d.count),
+                        backgroundColor: [
+                            '#ff6b6b',
+                            '#ffa94d',
+                            '#ffd43b',
+                            '#4dabf7',
+                            '#51cf66'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading top patterns:', error);
+    }
+}
+
+// Hourly Heatmap Chart
+async function loadHourlyHeatmap() {
+    try {
+        const response = await fetch('/api/analytics/hourly-heatmap');
+        const data = await response.json();
+        
+        if (data.success) {
+            const ctx = document.getElementById('hourlyHeatmapChart').getContext('2d');
+            
+            if (hourlyHeatmapChart) hourlyHeatmapChart.destroy();
+            
+            hourlyHeatmapChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.data.map(d => d.hour),
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: data.data.map(d => d.avg_risk),
+                        backgroundColor: data.data.map(d => {
+                            if (d.avg_risk >= 75) return '#ff6b6b';
+                            if (d.avg_risk >= 50) return '#ffa94d';
+                            if (d.avg_risk >= 25) return '#ffd43b';
+                            return '#51cf66';
+                        }),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            max: 100,
+                            title: { display: true, text: 'Risk Score' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading hourly heatmap:', error);
+    }
+}
+
+// Accuracy Metrics
+async function loadAccuracyMetrics() {
+    try {
+        const response = await fetch('/api/analytics/accuracy-metrics');
+        const data = await response.json();
+        
+        if (data.success) {
+            const metrics = data.data;
+            
+            document.getElementById('accuracyMetrics').innerHTML = `
+                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
+                    <h3 class="mb-0">${metrics.accuracy}%</h3>
+                    <small>Accuracy</small>
+                </div>
+                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h3 class="mb-0">${metrics.precision}%</h3>
+                    <small>Precision</small>
+                </div>
+                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                    <h3 class="mb-0">${metrics.recall}%</h3>
+                    <small>Recall</small>
+                </div>
+                <div class="border-top pt-3" style="font-size: 13px;">
+                    <p class="mb-2"><strong>Total Labeled:</strong> ${metrics.total}</p>
+                    <p class="mb-2"><strong style="color: #51cf66;">Correct:</strong> ${metrics.correct}</p>
+                    <p class="mb-0"><strong style="color: #ff6b6b;">Incorrect:</strong> ${metrics.incorrect}</p>
+                </div>
+            `;
+        } else {
+            document.getElementById('accuracyMetrics').innerHTML = `
+                <div class="text-muted p-4">
+                    <p class="mb-0">No labeled data available yet.</p>
+                    <small>Analyze transactions with actual labels to see accuracy metrics.</small>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading accuracy metrics:', error);
+        document.getElementById('accuracyMetrics').innerHTML = `
+            <div class="text-danger p-4">
+                <p class="mb-0">Error loading metrics</p>
+            </div>
+        `;
+    }
+}
+
+// Refresh all analytics
+function refreshAnalytics() {
+    console.log('🔄 Refreshing analytics...');
+    loadAnalytics();
+}
+
+// Auto-load analytics when page loads
+(function() {
+    const originalOnLoad = window.onload;
+    window.onload = function() {
+        if (originalOnLoad) originalOnLoad();
+        
+        // Wait 2 seconds then load analytics
+        setTimeout(() => {
+            console.log('📊 Loading analytics dashboard...');
+            loadAnalytics();
+        }, 2000);
+        
+        // Auto-refresh every 60 seconds
+        setInterval(() => {
+            console.log('🔄 Auto-refreshing analytics...');
+            loadAnalytics();
+        }, 60000);
+    };
+})();
+</script>
+
+
         <!-- Top 10 Riskiest Transactions -->
         <div class="stat-card">
             <div class="row align-items-center mb-4">
@@ -1060,6 +1581,531 @@
                 alert('❌ Error: ' + error.message);
             }
         }
+        // ============================================
+        // ALERT SYSTEM FUNCTIONS
+        // ============================================
+
+        async function loadAlertConfig() {
+            try {
+                const response = await fetch('/api/alerts/config');
+                const config = await response.json();
+                
+                document.getElementById('emailEnabled').checked = config.email_enabled;
+                document.getElementById('alertEmail').value = config.alert_email;
+                document.getElementById('thresholdCritical').value = config.thresholds.critical;
+                document.getElementById('thresholdHigh').value = config.thresholds.high;
+                document.getElementById('thresholdMedium').value = config.thresholds.medium;
+                
+                document.getElementById('criticalValue').textContent = config.thresholds.critical;
+                document.getElementById('highValue').textContent = config.thresholds.high;
+                document.getElementById('mediumValue').textContent = config.thresholds.medium;
+                
+                loadAlertStats();
+                
+            } catch (error) {
+                console.error('Error loading alert config:', error);
+            }
+        }
+
+        async function saveAlertConfig() {
+            try {
+                const config = {
+                    email_enabled: document.getElementById('emailEnabled').checked,
+                    alert_email: document.getElementById('alertEmail').value,
+                    threshold_critical: parseInt(document.getElementById('thresholdCritical').value),
+                    threshold_high: parseInt(document.getElementById('thresholdHigh').value),
+                    threshold_medium: parseInt(document.getElementById('thresholdMedium').value)
+                };
+                
+                const response = await fetch('/api/alerts/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Alert configuration saved successfully!');
+                } else {
+                    alert('❌ Error saving configuration');
+                }
+                
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function sendTestAlert() {
+            if (!confirm('Send a test alert email? (Make sure EMAIL_ENABLED=True in .env)')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/alerts/test', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Test alert sent! Check your email.');
+                } else {
+                    alert('ℹ️ ' + result.message);
+                }
+                
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function loadAlertStats() {
+            try {
+                const response = await fetch('/api/alerts/history');
+                const data = await response.json();
+                
+                const statsDiv = document.getElementById('alertStats');
+                statsDiv.innerHTML = `
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <div class="text-center p-3 bg-danger bg-opacity-10 rounded">
+                                <div class="h3 mb-1 text-danger">${data.stats.critical}</div>
+                                <small class="text-muted">Critical</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+                                <div class="h3 mb-1 text-warning">${data.stats.high}</div>
+                                <small class="text-muted">High</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center p-3 bg-info bg-opacity-10 rounded">
+                                <div class="h3 mb-1 text-info">${data.stats.medium}</div>
+                                <small class="text-muted">Medium</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <p class="mb-0"><strong>Total Alerts:</strong> ${data.total}</p>
+                    </div>
+                `;
+                
+                const alertsDiv = document.getElementById('recentAlerts');
+                if (data.alerts.length === 0) {
+                    alertsDiv.innerHTML = '<p class="text-muted text-center py-3">No alerts triggered yet</p>';
+                } else {
+                    alertsDiv.innerHTML = '';
+                    data.alerts.slice(0, 10).forEach(alert => {
+                        const riskClass = alert.alert_level.toLowerCase();
+                        const card = `
+                            <div class="border-start border-3 border-${riskClass === 'critical' ? 'danger' : 'warning'} p-2 mb-2 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <small class="text-muted">${alert.timestamp}</small>
+                                        <p class="mb-1"><strong>Risk: ${alert.risk_score}/100</strong></p>
+                                        <small>${alert.amount} BTC</small>
+                                    </div>
+                                    <span class="badge bg-${riskClass === 'critical' ? 'danger' : 'warning'}">${alert.alert_level}</span>
+                                </div>
+                            </div>
+                        `;
+                        alertsDiv.innerHTML += card;
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error loading alert stats:', error);
+            }
+        }
+
+        // Load alert config when page loads
+        window.addEventListener('load', function() {
+            loadAlertConfig();
+        });
+    </script>
+</body>
+</html>
+
+
+<!-- WATCHLIST SECTION -->
+<div class="container" style="margin-top: 30px;">
+    <div class="card">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">🔍 Watchlist Management</h3>
+            <div>
+                <button onclick="openAddWatchlistModal()" class="btn btn-light btn-sm">
+                    ➕ Add to Watchlist
+                </button>
+                <button onclick="exportWatchlist()" class="btn btn-light btn-sm">
+                    📥 Export CSV
+                </button>
+                <button onclick="loadWatchlist()" class="btn btn-light btn-sm">
+                    🔄 Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <!-- Watchlist Stats -->
+            <div class="row" style="margin-bottom: 20px;">
+                <div class="col-md-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <h4 id="watchlist-total">0</h4>
+                        <p>Total Watched</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);">
+                        <h4 id="watchlist-critical">0</h4>
+                        <p>Critical</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ffa94d 0%, #fd7e14 100%);">
+                        <h4 id="watchlist-high">0</h4>
+                        <p>High Risk</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #4dabf7 0%, #228be6 100%);">
+                        <h4 id="watchlist-active">0</h4>
+                        <p>Active This Week</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Watchlist Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead style="background-color: #f8f9fa;">
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Risk Level</th>
+                            <th>Reason</th>
+                            <th>Activity</th>
+                            <th>Added Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlist-table-body">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                                <p style="margin-top: 10px;">Loading watchlist...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="addWatchlistModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <span class="close" onclick="closeAddWatchlistModal()">&times;</span>
+        <h3 style="margin-bottom: 20px;">➕ Add to Watchlist</h3>
+        
+        <form id="addWatchlistForm">
+            <div class="form-group">
+                <label>Type:</label>
+                <select id="watchlist-type" class="form-control" required>
+                    <option value="address">Address</option>
+                    <option value="transaction">Transaction ID</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Value:</label>
+                <input type="text" id="watchlist-value" class="form-control" 
+                       placeholder="Enter address or transaction ID" required>
+            </div>
+
+            <div class="form-group">
+                <label>Risk Level:</label>
+                <select id="watchlist-risk" class="form-control" required>
+                    <option value="CRITICAL">🔴 CRITICAL</option>
+                    <option value="HIGH">🟠 HIGH</option>
+                    <option value="MEDIUM">🟡 MEDIUM</option>
+                    <option value="LOW">🔵 LOW</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Reason:</label>
+                <textarea id="watchlist-reason" class="form-control" rows="3" 
+                          placeholder="Why is this suspicious?" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Tags (comma-separated):</label>
+                <input type="text" id="watchlist-tags" class="form-control" 
+                       placeholder="e.g., scammer, mixer, high-volume">
+            </div>
+
+            <div class="form-group">
+                <label>Notes (optional):</label>
+                <textarea id="watchlist-notes" class="form-control" rows="2" 
+                          placeholder="Additional information..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+                ✅ Add to Watchlist
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 600px;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.risk-badge {
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.risk-CRITICAL { background-color: #ff6b6b; color: white; }
+.risk-HIGH { background-color: #ffa94d; color: white; }
+.risk-MEDIUM { background-color: #ffd43b; color: #333; }
+.risk-LOW { background-color: #4dabf7; color: white; }
+</style>
+
+<script>
+// Load watchlist data
+async function loadWatchlist() {
+    try {
+        // Load stats
+        const statsResponse = await fetch('/api/watchlist/stats');
+        const statsData = await statsResponse.json();
+        
+        if (statsData.success) {
+            document.getElementById('watchlist-total').textContent = statsData.stats.total;
+            document.getElementById('watchlist-critical').textContent = statsData.stats.critical;
+            document.getElementById('watchlist-high').textContent = statsData.stats.high;
+            document.getElementById('watchlist-active').textContent = statsData.stats.active_this_week;
+        }
+
+        // Load watchlist items
+        const response = await fetch('/api/watchlist');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('watchlist-table-body');
+        
+        if (data.success && data.data.length > 0) {
+            tbody.innerHTML = data.data.map(item => `
+                <tr>
+                    <td>${item.id}</td>
+                    <td><span class="badge badge-info">${item.type}</span></td>
+                    <td><code>${item.value.substring(0, 20)}...</code></td>
+                    <td><span class="risk-badge risk-${item.risk_level}">${item.risk_level}</span></td>
+                    <td>${item.reason}</td>
+                    <td>
+                        <strong>${item.activity_count}</strong> times<br>
+                        <small>${item.total_volume.toFixed(2)} BTC</small>
+                    </td>
+                    <td><small>${new Date(item.added_date).toLocaleDateString()}</small></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="removeFromWatchlist(${item.id})">
+                            🗑️ Remove
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px;">
+                        <p style="color: #999;">No items in watchlist yet. Add suspicious addresses to start monitoring!</p>
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading watchlist:', error);
+        showNotification('Failed to load watchlist', 'error');
+    }
+}
+
+// Open add modal
+function openAddWatchlistModal() {
+    document.getElementById('addWatchlistModal').style.display = 'flex';
+}
+
+// Close add modal
+function closeAddWatchlistModal() {
+    document.getElementById('addWatchlistModal').style.display = 'none';
+    document.getElementById('addWatchlistForm').reset();
+}
+
+// Handle form submission
+document.getElementById('addWatchlistForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const tags = document.getElementById('watchlist-tags').value
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    
+    const data = {
+        type: document.getElementById('watchlist-type').value,
+        value: document.getElementById('watchlist-value').value,
+        risk_level: document.getElementById('watchlist-risk').value,
+        reason: document.getElementById('watchlist-reason').value,
+        tags: tags,
+        notes: document.getElementById('watchlist-notes').value
+    };
+    
+    try {
+        const response = await fetch('/api/watchlist/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Added to watchlist successfully!', 'success');
+            closeAddWatchlistModal();
+            loadWatchlist();
+        } else {
+            showNotification('❌ ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('❌ Failed to add to watchlist', 'error');
+    }
+});
+
+// Remove from watchlist
+async function removeFromWatchlist(id) {
+    if (!confirm('Are you sure you want to remove this item from watchlist?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/watchlist/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('✅ Removed from watchlist', 'success');
+            loadWatchlist();
+        } else {
+            showNotification('❌ Failed to remove', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('❌ Failed to remove from watchlist', 'error');
+    }
+}
+
+// Export watchlist
+function exportWatchlist() {
+    window.location.href = '/api/watchlist/export';
+    showNotification('📥 Downloading watchlist...', 'success');
+}
+
+// Show notification
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'success' ? '#51cf66' : '#ff6b6b'};
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Load watchlist on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadWatchlist();
+    
+    // Refresh every 30 seconds
+    setInterval(loadWatchlist, 30000);
+});
+</script>
+
+
+
     </script>
 </body>
 </html>
