@@ -1,4 +1,5 @@
-from flask import Flask, render_template, jsonify, request, send_file, make_response
+from flask import Flask, render_template, jsonify, request, send_file, make_response, current_app
+from collections import defaultdict
 import os
 import json
 import threading
@@ -124,14 +125,13 @@ def _make_app():
 
 app = _make_app()
 
-
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/api/analytics/hourly-heatmap', methods=['GET'])
 def get_hourly_heatmap():
     """Get risk distribution by hour of day"""
     try:
-        history = load_history()
-        
+        load_history_fn = current_app.config.get('load_history')
+        history = load_history_fn() if load_history_fn else []
+
         if len(history) == 0:
             return jsonify({
                 'success': True,
@@ -140,19 +140,19 @@ def get_hourly_heatmap():
                     for h in range(24)
                 ]
             })
-        
+
         # Group by hour
         hourly_data = defaultdict(lambda: {'sum': 0, 'count': 0})
-        
+
         for tx in history:
             try:
                 hour = datetime.fromisoformat(tx['timestamp']).hour
-                hourly_data[hour]['sum'] += tx['risk_score']
+                hourly_data[hour]['sum'] += tx.get('risk_score', 0)
                 hourly_data[hour]['count'] += 1
             except Exception as e:
                 print(f"Error processing transaction: {e}")
                 continue
-        
+
         # Calculate averages
         heatmap_data = []
         for hour in range(24):
@@ -160,13 +160,13 @@ def get_hourly_heatmap():
                 avg_risk = hourly_data[hour]['sum'] / hourly_data[hour]['count']
             else:
                 avg_risk = 0
-            
+
             heatmap_data.append({
                 'hour': f"{hour:02d}:00",
                 'avg_risk': round(avg_risk, 2),
                 'count': hourly_data[hour]['count']
             })
-        
+
         return jsonify({
             'success': True,
             'data': heatmap_data
@@ -176,11 +176,102 @@ def get_hourly_heatmap():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/analytics/risk-trend', methods=['GET'])
+def get_risk_trend():
+    """Get risk score trend over last 7 days"""
+    try:
+        load_history_fn = current_app.config.get('load_history')
+        history = load_history_fn() if load_history_fn else []
+
+        if len(history) == 0:
+            return jsonify({
+                'success': True,
+                'data': [
+                    {'date': f'Day {i+1}', 'avg_risk': 0, 'count': 0}
+                    for i in range(7)
+                ]
+            })
+
+        seven_days_ago = datetime.now() - pd.Timedelta(days=7)
+        daily_data = defaultdict(lambda: {'sum': 0, 'count': 0})
+
+        for tx in history:
+            try:
+                tx_date = datetime.fromisoformat(tx['timestamp']).date()
+                if datetime.combine(tx_date, datetime.min.time()) >= seven_days_ago:
+                    date_str = tx_date.strftime('%Y-%m-%d')
+                    daily_data[date_str]['count'] += 1
+                    daily_data[date_str]['sum'] += tx.get('risk_score', 0)
+            except Exception:
+                continue
+
+        trend_data = []
+        for i in range(7):
+            date = (datetime.now() - pd.Timedelta(days=6-i)).date()
+            date_str = date.strftime('%Y-%m-%d')
+            if date_str in daily_data and daily_data[date_str]['count'] > 0:
+                avg_risk = daily_data[date_str]['sum'] / daily_data[date_str]['count']
+                count = daily_data[date_str]['count']
+            else:
+                avg_risk = 0
+                count = 0
+            trend_data.append({'date': date.strftime('%b %d'), 'avg_risk': round(avg_risk, 2), 'count': count})
+
+        return jsonify({'success': True, 'data': trend_data})
+    except Exception as e:
+        print(f"❌ Error in risk-trend: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/analytics/alert-timeline', methods=['GET'])
+def get_alert_timeline():
+    """Get alert distribution over time (last 7 days)"""
+    try:
+        load_history_fn = current_app.config.get('load_history')
+        history = load_history_fn() if load_history_fn else []
+
+        if len(history) == 0:
+            return jsonify({'success': True, 'data': [{'date': f'Day {i+1}', 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'normal': 0} for i in range(7)]})
+
+        seven_days_ago = datetime.now() - pd.Timedelta(days=7)
+        daily_alerts = defaultdict(lambda: {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'NORMAL': 0})
+
+        for tx in history:
+            try:
+                tx_date = datetime.fromisoformat(tx['timestamp']).date()
+                if datetime.combine(tx_date, datetime.min.time()) >= seven_days_ago:
+                    date_str = tx_date.strftime('%Y-%m-%d')
+                    alert_level = tx.get('alert_level', 'NORMAL').upper()
+                    if alert_level in daily_alerts[date_str]:
+                        daily_alerts[date_str][alert_level] += 1
+            except Exception:
+                continue
+
+        timeline_data = []
+        for i in range(7):
+            date = (datetime.now() - pd.Timedelta(days=6-i)).date()
+            date_str = date.strftime('%Y-%m-%d')
+            timeline_data.append({
+                'date': date.strftime('%b %d'),
+                'critical': daily_alerts[date_str]['CRITICAL'],
+                'high': daily_alerts[date_str]['HIGH'],
+                'medium': daily_alerts[date_str]['MEDIUM'],
+                'low': daily_alerts[date_str]['LOW'],
+                'normal': daily_alerts[date_str]['NORMAL']
+            })
+
+        return jsonify({'success': True, 'data': timeline_data})
+    except Exception as e:
+        print(f"❌ Error in alert-timeline: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/analytics/volume-analysis', methods=['GET'])
 def get_volume_analysis():
     """Get transaction volume analysis"""
     try:
-        history = load_history()
+        load_history_fn = current_app.config.get('load_history')
+        history = load_history_fn() if load_history_fn else []
         
         # Volume ranges
         ranges = [
@@ -241,7 +332,8 @@ def get_volume_analysis():
 def get_accuracy_metrics():
     """Get prediction accuracy metrics"""
     try:
-        history = load_history()
+        load_history_fn = current_app.config.get('load_history')
+        history = load_history_fn() if load_history_fn else []
         
         # Filter transactions with actual labels
         labeled = [tx for tx in history if tx.get('actual') is not None]
@@ -300,7 +392,8 @@ def get_accuracy_metrics():
 def get_top_patterns():
     """Get top fraud patterns detected"""
     try:
-        history = load_history()
+        load_history_fn = current_app.config.get('load_history')
+        history = load_history_fn() if load_history_fn else []
         
         if len(history) == 0:
             return jsonify({

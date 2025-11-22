@@ -1,0 +1,9 @@
+{
+  "email_enabled": false,
+  "alert_email": "",
+  "thresholds": {
+    "critical": 90,
+    "high": 75,
+    "medium": 50
+  }
+}

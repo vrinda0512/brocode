@@ -7,6 +7,8 @@ import os
 from werkzeug.utils import secure_filename
 from fpdf import FPDF
 from datetime import datetime
+import json
+from datetime import datetime
 
 bp = Blueprint('routes', __name__)
 
@@ -319,6 +321,80 @@ def export_csv(transaction_type):
         response.headers['Content-Type'] = 'text/csv'
         response.headers['Content-Disposition'] = f'attachment; filename={filename}'
         return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/alerts/config', methods=['GET', 'POST'])
+def alert_config():
+    """Get or set alert configuration (stored in app config or a JSON file)."""
+    try:
+        # Use in-memory config if available
+        cfg = current_app.config.setdefault('alert_config', {
+            'email_enabled': False,
+            'alert_email': '',
+            'thresholds': {
+                'critical': current_app.config.get('ALERT_THRESHOLD_CRITICAL', 90),
+                'high': current_app.config.get('ALERT_THRESHOLD_HIGH', 75),
+                'medium': current_app.config.get('ALERT_THRESHOLD_MEDIUM', 50)
+            }
+        })
+
+        if request.method == 'GET':
+            return jsonify(cfg)
+
+        # POST: update config
+        data = request.json or {}
+        cfg['email_enabled'] = bool(data.get('email_enabled', cfg.get('email_enabled', False)))
+        cfg['alert_email'] = data.get('alert_email', cfg.get('alert_email', ''))
+        # thresholds may be provided as flat keys
+        thresholds = cfg.get('thresholds', {})
+        thresholds['critical'] = int(data.get('threshold_critical', thresholds.get('critical', cfg['thresholds']['critical'])))
+        thresholds['high'] = int(data.get('threshold_high', thresholds.get('high', cfg['thresholds']['high'])))
+        thresholds['medium'] = int(data.get('threshold_medium', thresholds.get('medium', cfg['thresholds']['medium'])))
+        cfg['thresholds'] = thresholds
+
+        # persist to outputs/alert_config.json if possible
+        try:
+            base = os.path.abspath(os.path.dirname(__file__))
+            outp = os.path.join(base, 'outputs', 'alert_config.json')
+            with open(outp, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, indent=2)
+        except Exception:
+            pass
+
+        # also update app-level thresholds
+        current_app.config['ALERT_THRESHOLD_CRITICAL'] = cfg['thresholds']['critical']
+        current_app.config['ALERT_THRESHOLD_HIGH'] = cfg['thresholds']['high']
+        current_app.config['ALERT_THRESHOLD_MEDIUM'] = cfg['thresholds']['medium']
+
+        return jsonify({'success': True, 'config': cfg})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/alerts/history', methods=['GET'])
+def alerts_history():
+    """Return recent alerts and simple stats derived from history file."""
+    try:
+        load_history = _get('load_history')
+        history = load_history() if load_history else []
+
+        # derive recent alerts (entries that have alert_level)
+        alerts = [h for h in history if h.get('alert_level')]
+
+        from collections import Counter
+        cnt = Counter([a.get('alert_level', 'NORMAL') for a in alerts])
+
+        stats = {
+            'critical': cnt.get('CRITICAL', 0),
+            'high': cnt.get('HIGH', 0),
+            'medium': cnt.get('MEDIUM', 0),
+            'low': cnt.get('LOW', 0),
+            'normal': cnt.get('NORMAL', 0)
+        }
+
+        return jsonify({'total': len(alerts), 'stats': stats, 'alerts': alerts})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
