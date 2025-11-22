@@ -142,21 +142,42 @@
     </style>
 </head>
 <body>
+        <!-- Add this navigation bar -->
+    <nav class="navbar navbar-dark" style="background: rgba(0,0,0,0.3); backdrop-filter: blur(10px);">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <strong>🛡️ ChainGuard</strong>
+            </a>
+            <div class="d-flex">
+                <a href="/" class="btn btn-outline-light btn-sm me-2">
+                    🏠 Dashboard
+                </a>
+                <a href="/live-monitoring" class="btn btn-success btn-sm">
+                    📡 Live Monitoring
+                </a>
+            </div>
+        </div>
+    </nav>
     <div class="dashboard-container">
         <!-- Header -->
         <div class="header">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="mb-2">🛡️ ChainGuard Dashboard</h1>
-                    <p class="text-muted mb-0">AI-Powered DeFi Transaction Fraud Detection System</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <button class="btn btn-scan" onclick="scanNewTransaction()">
-                        🔍 Scan Random Transaction
-                    </button>
-                </div>
-            </div>
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h1 class="mb-2">🛡️ ChainGuard Dashboard</h1>
+            <p class="text-muted mb-0">AI-Powered DeFi Transaction Fraud Detection System</p>
         </div>
+        <div class="col-md-6 text-end">
+            <!-- Add Live Monitoring Button -->
+            <a href="/live-monitoring" class="btn btn-scan me-2" style="display: inline-block;">
+                📡 Live Monitoring
+                <span class="live-indicator" style="display: inline-block; width: 10px; height: 10px; background-color: #26de81; border-radius: 50%; animation: pulse 2s infinite; margin-left: 5px;"></span>
+            </a>
+            <button class="btn btn-scan" onclick="scanNewTransaction()">
+                🔍 Scan Random Transaction
+            </button>
+        </div>
+    </div>
+</div>
 
         <!-- Statistics Cards -->
         <div class="row">
@@ -367,7 +388,6 @@
             <div id="historyPagination" class="mt-3 text-center" style="display:none;"></div>
         </div>
 
-<!-- ... existing code ... -->
 
         <!-- FEATURE 4: Alert System -->
         <div class="stat-card mt-4">
@@ -539,354 +559,268 @@
 
 <script>
 // ============================================
-// ANALYTICS DASHBOARD FUNCTIONS
+// ANALYTICS DASHBOARD - MANUAL ONLY (NO AUTO-REFRESH)
 // ============================================
 
-let riskTrendChart, alertTimelineChart, volumeAnalysisChart, topPatternsChart, hourlyHeatmapChart;
+let analyticsCharts = {};
+let isLoading = false;
 
-// Load all analytics
+// Completely destroy all charts
+function clearAllCharts() {
+    console.log('🧹 Clearing all charts...');
+    
+    // Destroy Chart.js instances
+    Object.keys(analyticsCharts).forEach(key => {
+        if (analyticsCharts[key]) {
+            try {
+                analyticsCharts[key].destroy();
+            } catch (e) {}
+            analyticsCharts[key] = null;
+        }
+    });
+    
+    // Clear canvas elements manually
+    ['riskTrendChart', 'alertTimelineChart', 'volumeAnalysisChart', 'topPatternsChart', 'hourlyHeatmapChart'].forEach(id => {
+        const canvas = document.getElementById(id);
+        if (canvas) {
+            const parent = canvas.parentNode;
+            const newCanvas = canvas.cloneNode(true);
+            parent.replaceChild(newCanvas, canvas);
+        }
+    });
+}
+
+// Load analytics manually only
 async function loadAnalytics() {
+    if (isLoading) return;
+    isLoading = true;
+    
+    console.log('🔄 Loading analytics manually...');
+    
     try {
-        await Promise.all([
-            loadRiskTrend(),
-            loadAlertTimeline(),
-            loadVolumeAnalysis(),
-            loadTopPatterns(),
-            loadHourlyHeatmap(),
-            loadAccuracyMetrics()
-        ]);
+        // Clear everything first
+        clearAllCharts();
+        
+        // Wait for cleanup
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Load one by one
+        await createRiskTrendChart();
+        await createAlertTimelineChart();
+        await createVolumeAnalysisChart();
+        await createTopPatternsChart();
+        await createHourlyHeatmapChart();
+        await createAccuracyMetrics();
+        
         console.log('✅ Analytics loaded successfully');
     } catch (error) {
-        console.error('❌ Error loading analytics:', error);
+        console.error('❌ Error:', error);
+    } finally {
+        isLoading = false;
     }
 }
 
-// Risk Trend Chart
-async function loadRiskTrend() {
+// Individual chart creators
+async function createRiskTrendChart() {
     try {
         const response = await fetch('/api/analytics/risk-trend');
         const data = await response.json();
         
         if (data.success) {
-            const ctx = document.getElementById('riskTrendChart').getContext('2d');
+            const canvas = document.getElementById('riskTrendChart');
+            const ctx = canvas.getContext('2d');
             
-            if (riskTrendChart) riskTrendChart.destroy();
-            
-            riskTrendChart = new Chart(ctx, {
+            analyticsCharts.riskTrend = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.data.map(d => d.date),
                     datasets: [{
-                        label: 'Average Risk Score',
+                        label: 'Risk Score',
                         data: data.data.map(d => d.avg_risk),
                         borderColor: '#ff6b6b',
-                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4
-                    }, {
-                        label: 'Transaction Count',
-                        data: data.data.map(d => d.count),
-                        borderColor: '#4dabf7',
-                        backgroundColor: 'rgba(77, 171, 247, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        yAxisID: 'y1'
+                        backgroundColor: 'rgba(255,107,107,0.1)',
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            title: { display: true, text: 'Risk Score' }
-                        },
-                        y1: {
-                            beginAtZero: true,
-                            position: 'right',
-                            title: { display: true, text: 'Count' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
+                    scales: { y: { beginAtZero: true, max: 100 } }
                 }
             });
         }
     } catch (error) {
-        console.error('Error loading risk trend:', error);
+        console.error('Risk trend error:', error);
     }
 }
 
-// Alert Timeline Chart
-async function loadAlertTimeline() {
+async function createAlertTimelineChart() {
     try {
         const response = await fetch('/api/analytics/alert-timeline');
         const data = await response.json();
         
         if (data.success) {
-            const ctx = document.getElementById('alertTimelineChart').getContext('2d');
+            const canvas = document.getElementById('alertTimelineChart');
+            const ctx = canvas.getContext('2d');
             
-            if (alertTimelineChart) alertTimelineChart.destroy();
-            
-            alertTimelineChart = new Chart(ctx, {
+            analyticsCharts.alertTimeline = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: data.data.map(d => d.date),
                     datasets: [
-                        {
-                            label: 'Critical',
-                            data: data.data.map(d => d.critical),
-                            backgroundColor: '#ff6b6b'
-                        },
-                        {
-                            label: 'High',
-                            data: data.data.map(d => d.high),
-                            backgroundColor: '#ffa94d'
-                        },
-                        {
-                            label: 'Medium',
-                            data: data.data.map(d => d.medium),
-                            backgroundColor: '#ffd43b'
-                        },
-                        {
-                            label: 'Low',
-                            data: data.data.map(d => d.low),
-                            backgroundColor: '#4dabf7'
-                        },
-                        {
-                            label: 'Normal',
-                            data: data.data.map(d => d.normal),
-                            backgroundColor: '#51cf66'
-                        }
+                        { label: 'Critical', data: data.data.map(d => d.critical), backgroundColor: '#ff6b6b' },
+                        { label: 'High', data: data.data.map(d => d.high), backgroundColor: '#ffa94d' },
+                        { label: 'Normal', data: data.data.map(d => d.normal), backgroundColor: '#51cf66' }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    scales: {
-                        x: { stacked: true },
-                        y: { stacked: true, beginAtZero: true }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
                 }
             });
         }
     } catch (error) {
-        console.error('Error loading alert timeline:', error);
+        console.error('Alert timeline error:', error);
     }
 }
 
-// Volume Analysis Chart
-async function loadVolumeAnalysis() {
+async function createVolumeAnalysisChart() {
     try {
         const response = await fetch('/api/analytics/volume-analysis');
         const data = await response.json();
         
         if (data.success) {
-            const ctx = document.getElementById('volumeAnalysisChart').getContext('2d');
+            const canvas = document.getElementById('volumeAnalysisChart');
+            const ctx = canvas.getContext('2d');
             
-            if (volumeAnalysisChart) volumeAnalysisChart.destroy();
-            
-            volumeAnalysisChart = new Chart(ctx, {
+            analyticsCharts.volumeAnalysis = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: data.data.map(d => d.label),
                     datasets: [{
-                        label: 'Average Risk Score',
                         data: data.data.map(d => d.avg_risk),
-                        backgroundColor: [
-                            '#51cf66',
-                            '#4dabf7',
-                            '#ffd43b',
-                            '#ffa94d',
-                            '#ff6b6b'
-                        ]
+                        backgroundColor: ['#51cf66', '#4dabf7', '#ffd43b', '#ffa94d', '#ff6b6b']
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
+                    scales: { y: { beginAtZero: true, max: 100 } },
+                    plugins: { legend: { display: false } }
                 }
             });
         }
     } catch (error) {
-        console.error('Error loading volume analysis:', error);
+        console.error('Volume analysis error:', error);
     }
 }
 
-// Top Patterns Chart
-async function loadTopPatterns() {
+async function createTopPatternsChart() {
     try {
         const response = await fetch('/api/analytics/top-patterns');
         const data = await response.json();
         
         if (data.success) {
-            const ctx = document.getElementById('topPatternsChart').getContext('2d');
+            const canvas = document.getElementById('topPatternsChart');
+            const ctx = canvas.getContext('2d');
             
-            if (topPatternsChart) topPatternsChart.destroy();
-            
-            topPatternsChart = new Chart(ctx, {
+            analyticsCharts.topPatterns = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: data.data.map(d => d.pattern),
                     datasets: [{
                         data: data.data.map(d => d.count),
-                        backgroundColor: [
-                            '#ff6b6b',
-                            '#ffa94d',
-                            '#ffd43b',
-                            '#4dabf7',
-                            '#51cf66'
-                        ]
+                        backgroundColor: ['#ff6b6b', '#ffa94d', '#ffd43b', '#4dabf7', '#51cf66']
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
+                    maintainAspectRatio: true
                 }
             });
         }
     } catch (error) {
-        console.error('Error loading top patterns:', error);
+        console.error('Top patterns error:', error);
     }
 }
 
-// Hourly Heatmap Chart
-async function loadHourlyHeatmap() {
+async function createHourlyHeatmapChart() {
     try {
         const response = await fetch('/api/analytics/hourly-heatmap');
         const data = await response.json();
         
         if (data.success) {
-            const ctx = document.getElementById('hourlyHeatmapChart').getContext('2d');
+            const canvas = document.getElementById('hourlyHeatmapChart');
+            const ctx = canvas.getContext('2d');
             
-            if (hourlyHeatmapChart) hourlyHeatmapChart.destroy();
-            
-            hourlyHeatmapChart = new Chart(ctx, {
+            analyticsCharts.hourlyHeatmap = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: data.data.map(d => d.hour),
                     datasets: [{
-                        label: 'Average Risk Score',
                         data: data.data.map(d => d.avg_risk),
-                        backgroundColor: data.data.map(d => {
-                            if (d.avg_risk >= 75) return '#ff6b6b';
-                            if (d.avg_risk >= 50) return '#ffa94d';
-                            if (d.avg_risk >= 25) return '#ffd43b';
-                            return '#51cf66';
-                        }),
-                        borderWidth: 0
+                        backgroundColor: data.data.map(d => d.avg_risk >= 50 ? '#ff6b6b' : '#51cf66')
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            max: 100,
-                            title: { display: true, text: 'Risk Score' }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
+                    scales: { y: { beginAtZero: true, max: 100 } },
+                    plugins: { legend: { display: false } }
                 }
             });
         }
     } catch (error) {
-        console.error('Error loading hourly heatmap:', error);
+        console.error('Hourly heatmap error:', error);
     }
 }
 
-// Accuracy Metrics
-async function loadAccuracyMetrics() {
+async function createAccuracyMetrics() {
     try {
         const response = await fetch('/api/analytics/accuracy-metrics');
         const data = await response.json();
         
         if (data.success) {
             const metrics = data.data;
-            
             document.getElementById('accuracyMetrics').innerHTML = `
-                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
+                <div class="mb-3 p-3 rounded text-white" style="background: #11998e;">
                     <h3 class="mb-0">${metrics.accuracy}%</h3>
                     <small>Accuracy</small>
                 </div>
-                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="mb-3 p-3 rounded text-white" style="background: #667eea;">
                     <h3 class="mb-0">${metrics.precision}%</h3>
                     <small>Precision</small>
                 </div>
-                <div class="mb-3 p-3 rounded" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                <div class="mb-3 p-3 rounded text-white" style="background: #f093fb;">
                     <h3 class="mb-0">${metrics.recall}%</h3>
                     <small>Recall</small>
                 </div>
-                <div class="border-top pt-3" style="font-size: 13px;">
-                    <p class="mb-2"><strong>Total Labeled:</strong> ${metrics.total}</p>
-                    <p class="mb-2"><strong style="color: #51cf66;">Correct:</strong> ${metrics.correct}</p>
-                    <p class="mb-0"><strong style="color: #ff6b6b;">Incorrect:</strong> ${metrics.incorrect}</p>
-                </div>
-            `;
-        } else {
-            document.getElementById('accuracyMetrics').innerHTML = `
-                <div class="text-muted p-4">
-                    <p class="mb-0">No labeled data available yet.</p>
-                    <small>Analyze transactions with actual labels to see accuracy metrics.</small>
+                <div class="mt-3 small">
+                    <p><strong>Total:</strong> ${metrics.total}</p>
+                    <p><strong>Correct:</strong> ${metrics.correct}</p>
                 </div>
             `;
         }
     } catch (error) {
-        console.error('Error loading accuracy metrics:', error);
-        document.getElementById('accuracyMetrics').innerHTML = `
-            <div class="text-danger p-4">
-                <p class="mb-0">Error loading metrics</p>
-            </div>
-        `;
+        console.error('Accuracy metrics error:', error);
     }
 }
 
-// Refresh all analytics
+// Manual refresh only
 function refreshAnalytics() {
-    console.log('🔄 Refreshing analytics...');
+    console.log('🔄 Manual refresh clicked');
     loadAnalytics();
 }
 
-// Auto-load analytics when page loads
-(function() {
-    const originalOnLoad = window.onload;
-    window.onload = function() {
-        if (originalOnLoad) originalOnLoad();
-        
-        // Wait 2 seconds then load analytics
-        setTimeout(() => {
-            console.log('📊 Loading analytics dashboard...');
-            loadAnalytics();
-        }, 2000);
-        
-        // Auto-refresh every 60 seconds
-        setInterval(() => {
-            console.log('🔄 Auto-refreshing analytics...');
-            loadAnalytics();
-        }, 60000);
-    };
-})();
-</script>
+// ONE-TIME load on page ready (NO AUTO-REFRESH)
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📊 Page ready - loading analytics once');
+    setTimeout(loadAnalytics, 3000);
+});
 
+console.log('✅ Analytics script loaded - MANUAL MODE ONLY');
+</script>
 
         <!-- Top 10 Riskiest Transactions -->
         <div class="stat-card">
@@ -1165,9 +1099,7 @@ function refreshAnalytics() {
                                     <div class="col-md-4 text-center">
                                         <div class="display-3 fw-bold text-${result.color}">${result.risk_score}</div>
                                         <p class="text-muted mb-1">Final Risk Score</p>
-                                        <small class="text-muted">Base: ${result.details.base_risk}% ${result.details.adjustment}%</small>
-                                    </div>
-                                    <div class="col-md-8">
+                                        <div class="col-md-8">
                                         <div class="mb-3">
                                             <strong>Transaction ID:</strong> 
                                             <code>${result.transaction_id}</code>
