@@ -152,7 +152,7 @@
                 </div>
                 <div class="col-md-4 text-end">
                     <button class="btn btn-scan" onclick="scanNewTransaction()">
-                        🔍 Scan New Transaction
+                        🔍 Scan Random Transaction
                     </button>
                 </div>
             </div>
@@ -202,9 +202,198 @@
             </div>
         </div>
 
+        <!-- Custom Transaction Input Form -->
+        <div class="stat-card mt-4">
+            <h4 class="mb-4">🔍 Analyze Custom Transaction</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <form id="customTransactionForm">
+                        <div class="mb-3">
+                            <label for="txAmount" class="form-label">💰 Transaction Amount (BTC)</label>
+                            <input type="number" class="form-control" id="txAmount" 
+                                   step="0.0001" value="1.5" min="0" required>
+                            <small class="text-muted">Example: 1.5 BTC ≈ $60,000 USD</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="txInputs" class="form-label">📥 Number of Inputs</label>
+                            <input type="number" class="form-control" id="txInputs" 
+                                   value="2" min="1" max="100" required>
+                            <small class="text-muted">How many sources funded this transaction</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="txOutputs" class="form-label">📤 Number of Outputs</label>
+                            <input type="number" class="form-control" id="txOutputs" 
+                                   value="2" min="1" max="100" required>
+                            <small class="text-muted">How many destinations receive funds</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="txFee" class="form-label">⚡ Transaction Fee (BTC)</label>
+                            <input type="number" class="form-control" id="txFee" 
+                                   step="0.000001" value="0.0001" min="0" required>
+                            <small class="text-muted">Network fee paid (typically 0.0001-0.001 BTC)</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-scan w-100">
+                            🔍 Analyze This Transaction
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="col-md-6">
+                    <div id="customScanResult" style="display:none;">
+                        <div id="customScanDetails"></div>
+                    </div>
+                    
+                    <div id="customScanPlaceholder" class="text-center" style="padding: 50px;">
+                        <div style="font-size: 4rem; color: #ccc;">📊</div>
+                        <p class="text-muted mt-3">Enter transaction details and click "Analyze" to see AI prediction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE 2: Batch Analysis -->
+        <div class="stat-card mt-4">
+            <h4 class="mb-4">📁 Batch Analysis - Upload CSV File</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <strong>ℹ️ How it works:</strong>
+                        <ul class="mb-0">
+                            <li>Upload a CSV file with multiple transactions</li>
+                            <li>Required columns: <code>amount, num_inputs, num_outputs, fee</code></li>
+                            <li>Get instant analysis for all transactions</li>
+                            <li>Download results as CSV</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="downloadTemplate()">
+                            📥 Download CSV Template
+                        </button>
+                    </div>
+                    
+                    <form id="batchUploadForm">
+                        <div class="mb-3">
+                            <label for="csvFile" class="form-label">📄 Select CSV File</label>
+                            <input type="file" class="form-control" id="csvFile" accept=".csv" required>
+                            <small class="text-muted">Maximum file size: 16MB</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-scan w-100">
+                            🚀 Analyze All Transactions
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="col-md-6">
+                    <div id="batchResults" style="display:none;">
+                        <div id="batchSummary"></div>
+                    </div>
+                    
+                    <div id="batchPlaceholder" class="text-center" style="padding: 50px;">
+                        <div style="font-size: 4rem; color: #ccc;">📊</div>
+                        <p class="text-muted mt-3">Upload a CSV file to analyze multiple transactions at once</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE 3: Historical Tracking -->
+        <div class="stat-card mt-4">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-6">
+                    <h4 class="mb-0">📜 Transaction Analysis History</h4>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshHistory()">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="exportHistory()">
+                        📥 Export History
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearHistory()">
+                        🗑️ Clear History
+                    </button>
+                </div>
+            </div>
+            
+            <!-- History Stats -->
+            <div class="row mb-4" id="historyStats" style="display:none;">
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-1" id="historyTotal">0</div>
+                        <small class="text-muted">Total Analyzed</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-1" id="historyAvgRisk">0</div>
+                        <small class="text-muted">Avg Risk Score</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-1 text-danger" id="historyHighRisk">0</div>
+                        <small class="text-muted">High Risk (Recent)</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <div class="h4 mb-1 text-warning" id="historyMaxRisk">0</div>
+                        <small class="text-muted">Max Risk Score</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trend Chart -->
+            <div class="mb-4" id="trendChartContainer" style="display:none;">
+                <h6>📈 7-Day Trend</h6>
+                <canvas id="trendChart"></canvas>
+            </div>
+            
+            <!-- History List -->
+            <div id="historyList">
+                <div class="text-center text-muted py-5">
+                    <div style="font-size: 3rem;">📜</div>
+                    <p class="mt-3">No analysis history yet. Analyze some transactions to see history!</p>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div id="historyPagination" class="mt-3 text-center" style="display:none;"></div>
+        </div>
+
         <!-- Top 10 Riskiest Transactions -->
         <div class="stat-card">
-            <h4 class="mb-4">🚨 Top 10 Highest Risk Transactions</h4>
+            <div class="row align-items-center mb-4">
+                <div class="col-md-6">
+                    <h4 class="mb-0">🚨 Top 10 Highest Risk Transactions</h4>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="exportData('csv', 'top10')">
+                            📊 Export CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="exportData('pdf', 'summary')">
+                            📄 Export PDF Report
+                        </button>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                More Exports
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="exportData('csv', 'all')">📁 All Transactions (CSV)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportData('csv', 'critical')">🚨 Critical Alerts (CSV)</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportData('csv', 'high')">⚠️ High Risk (CSV)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="top10-list">
                 <div class="loading" style="display:block;">
                     <div class="spinner-border text-primary"></div>
@@ -213,9 +402,9 @@
             </div>
         </div>
 
-        <!-- Scan Result Modal -->
+        <!-- Random Scan Result Modal -->
         <div id="scan-result" style="display:none;" class="stat-card mt-4">
-            <h4 class="mb-4">🔍 New Transaction Scan Result</h4>
+            <h4 class="mb-4">🎲 Random Transaction Scan Result</h4>
             <div id="scan-details"></div>
         </div>
     </div>
@@ -323,12 +512,12 @@
             transactions.forEach((tx, index) => {
                 const riskClass = tx.Alert_Level.toLowerCase();
                 const card = `
-                    <div class="transaction-card">
+                    <div class="transaction-card" data-tx-id="${tx.Transaction_ID}">
                         <div class="row align-items-center">
                             <div class="col-md-1">
                                 <h3 class="text-muted mb-0">#${index + 1}</h3>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <small class="text-muted">Transaction ID</small>
                                 <p class="mb-0"><strong>${tx.Transaction_ID}</strong></p>
                                 <small class="text-muted">${tx.Obfuscated_ID}</small>
@@ -340,9 +529,14 @@
                             <div class="col-md-2">
                                 <span class="risk-badge risk-${riskClass}">${tx.Alert_Level}</span>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <small class="text-muted">Recommended Action</small>
                                 <p class="mb-0 small">${tx.Recommended_Action}</p>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-sm btn-outline-info" onclick="exportTransactionReport(${tx.Transaction_ID})">
+                                    📄 Export PDF
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -400,7 +594,6 @@
                     </div>
                 `;
                 
-                // Scroll to result
                 resultDiv.scrollIntoView({ behavior: 'smooth' });
                 
             } catch (error) {
@@ -408,11 +601,465 @@
             }
         }
         
+        // Handle custom transaction form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('customTransactionForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const resultDiv = document.getElementById('customScanResult');
+                const placeholderDiv = document.getElementById('customScanPlaceholder');
+                const detailsDiv = document.getElementById('customScanDetails');
+                
+                placeholderDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                detailsDiv.innerHTML = '<div class="loading" style="display:block;"><div class="spinner-border text-primary"></div><p class="mt-3">Analyzing transaction with AI...</p></div>';
+                
+                const formData = {
+                    amount: parseFloat(document.getElementById('txAmount').value),
+                    num_inputs: parseInt(document.getElementById('txInputs').value),
+                    num_outputs: parseInt(document.getElementById('txOutputs').value),
+                    fee: parseFloat(document.getElementById('txFee').value)
+                };
+                
+                try {
+                    const response = await fetch('/api/predict_custom', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        const riskClass = result.alert_level.toLowerCase();
+                        const predictionColor = result.prediction === 'Fraud' ? 'danger' : 'success';
+                        
+                        detailsDiv.innerHTML = `
+                            <div class="alert alert-${result.color} border-start border-5 border-${result.color}">
+                                <h5 class="alert-heading">${result.alert_message}</h5>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-4 text-center">
+                                        <div class="display-3 fw-bold text-${result.color}">${result.risk_score}</div>
+                                        <p class="text-muted mb-1">Final Risk Score</p>
+                                        <small class="text-muted">Base: ${result.details.base_risk}% ${result.details.adjustment}%</small>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <strong>Transaction ID:</strong> 
+                                            <code>${result.transaction_id}</code>
+                                        </div>
+                                        <div class="mb-3">
+                                            <strong>Prediction:</strong> 
+                                            <span class="badge bg-${predictionColor} fs-6">${result.prediction}</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <strong>Alert Level:</strong> 
+                                            <span class="risk-badge risk-${riskClass}">${result.alert_level}</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <strong>Input Details:</strong>
+                                            <ul class="mb-0">
+                                                <li>Amount: ${result.details.amount} BTC (~$${(result.details.amount * 40000).toLocaleString()} USD)</li>
+                                                <li>Inputs: ${result.details.num_inputs}</li>
+                                                <li>Outputs: ${result.details.num_outputs}</li>
+                                                <li>Fee: ${result.details.fee} BTC</li>
+                                            </ul>
+                                        </div>
+                                        <div class="alert alert-${result.color} bg-light mb-0">
+                                            <strong>📋 Recommended Action:</strong><br>
+                                            ${result.recommended_action}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Refresh history after analysis
+                        loadHistory(1);
+                    } else {
+                        detailsDiv.innerHTML = `<div class="alert alert-danger">Error: ${result.error}</div>`;
+                    }
+                    
+                } catch (error) {
+                    detailsDiv.innerHTML = `<div class="alert alert-danger">Error analyzing transaction: ${error.message}</div>`;
+                }
+            });
+        });
+        
         // Load dashboard on page load
-        window.onload = loadDashboard;
+        window.onload = function() {
+            loadDashboard();
+            loadHistory(1);
+        };
         
         // Refresh stats every 30 seconds
         setInterval(loadDashboard, 30000);
+
+        // ============================================
+        // EXPORT FUNCTIONS
+        // ============================================
+
+        function exportData(format, type) {
+            if (format === 'csv') {
+                window.location.href = `/api/export/csv/${type}`;
+            } else if (format === 'pdf') {
+                window.location.href = `/api/export/pdf/${type}`;
+            }
+        }
+
+        function exportTransactionReport(txId) {
+            window.location.href = `/api/export/pdf/transaction/${txId}`;
+        }
+
+        // ============================================
+        // BATCH ANALYSIS FUNCTIONS
+        // ============================================
+
+        function downloadTemplate() {
+            window.location.href = '/api/batch/template';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('batchUploadForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('csvFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    alert('Please select a CSV file');
+                    return;
+                }
+                
+                const resultsDiv = document.getElementById('batchResults');
+                const placeholderDiv = document.getElementById('batchPlaceholder');
+                const summaryDiv = document.getElementById('batchSummary');
+                
+                placeholderDiv.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                summaryDiv.innerHTML = '<div class="loading" style="display:block;"><div class="spinner-border text-primary"></div><p class="mt-3">Analyzing ' + file.name + '...</p></div>';
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    const response = await fetch('/api/batch/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        const summary = result.summary;
+                        
+                        let alertColor = 'success';
+                        if (summary.critical_count > 0) alertColor = 'danger';
+                        else if (summary.high_count > 0) alertColor = 'warning';
+                        else if (summary.medium_count > 0) alertColor = 'info';
+                        
+                        summaryDiv.innerHTML = `
+                            <div class="alert alert-${alertColor} border-start border-5">
+                                <h5 class="alert-heading">✅ Analysis Complete!</h5>
+                                <hr>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <strong>Total Transactions:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        ${summary.total_transactions}
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <strong>Successfully Analyzed:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        ${summary.successful_analyses}
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <strong>Average Risk Score:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                        <span class="badge bg-secondary">${summary.avg_risk_score.toFixed(1)}/100</span>
+                                    </div>
+                                </div>
+                                
+                                <hr>
+                                
+                                <h6>Alert Distribution:</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-4">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="fw-bold text-danger">${summary.critical_count}</div>
+                                            <small>Critical</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="fw-bold text-warning">${summary.high_count}</div>
+                                            <small>High</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="fw-bold text-info">${summary.medium_count}</div>
+                                            <small>Medium</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="fw-bold text-secondary">${summary.low_count}</div>
+                                            <small>Low</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-center p-2 bg-light rounded">
+                                            <div class="fw-bold text-success">${summary.normal_count}</div>
+                                            <small>Normal</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <a href="${result.download_url}" class="btn btn-primary w-100">
+                                    📥 Download Results CSV
+                                </a>
+                            </div>
+                        `;
+                        
+                        fileInput.value = '';
+                        
+                    } else {
+                        summaryDiv.innerHTML = `
+                            <div class="alert alert-danger">
+                                <strong>❌ Error:</strong> ${result.error}
+                                ${result.required ? '<br><small>Required columns: ' + result.required.join(', ') + '</small>' : ''}
+                            </div>
+                        `;
+                    }
+                    
+                } catch (error) {
+                    summaryDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>❌ Error:</strong> ${error.message}
+                        </div>
+                    `;
+                }
+            });
+        });
+
+        // ============================================
+        // HISTORY TRACKING FUNCTIONS
+        // ============================================
+
+        let trendChartInstance = null;
+
+        async function loadHistory(page = 1) {
+            try {
+                const response = await fetch(`/api/history?page=${page}&per_page=20`);
+                const data = await response.json();
+                
+                if (data.history.length === 0) {
+                    document.getElementById('historyList').innerHTML = `
+                        <div class="text-center text-muted py-5">
+                            <div style="font-size: 3rem;">📜</div>
+                            <p class="mt-3">No analysis history yet. Analyze some transactions to see history!</p>
+                        </div>
+                    `;
+                    document.getElementById('historyStats').style.display = 'none';
+                    document.getElementById('trendChartContainer').style.display = 'none';
+                    return;
+                }
+                
+                loadHistoryStats();
+                
+                const listContainer = document.getElementById('historyList');
+                listContainer.innerHTML = '';
+                
+                data.history.forEach((item, index) => {
+                    const riskClass = item.alert_level.toLowerCase();
+                    const predictionColor = item.prediction === 'Fraud' ? 'danger' : 'success';
+                    
+                    const card = `
+                        <div class="transaction-card mb-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <small class="text-muted">Analyzed</small>
+                                    <p class="mb-0"><strong>${item.timestamp}</strong></p>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Amount</small>
+                                    <p class="mb-0">${item.amount} BTC</p>
+                                </div>
+                                <div class="col-md-1">
+                                    <small class="text-muted">I/O</small>
+                                    <p class="mb-0">${item.num_inputs}/${item.num_outputs}</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Risk</small>
+                                    <h5 class="mb-0 text-${riskClass === 'critical' || riskClass === 'high' ? 'danger' : 'secondary'}">${item.risk_score}/100</h5>
+                                </div>
+                                <div class="col-md-2">
+                                    <span class="risk-badge risk-${riskClass}">${item.alert_level}</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Action</small>
+                                    <p class="mb-0 small">${item.recommended_action}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.innerHTML += card;
+                });
+                
+                if (data.total_pages > 1) {
+                    let pagination = '<nav><ul class="pagination justify-content-center">';
+                    
+                    for (let i = 1; i <= data.total_pages; i++) {
+                        pagination += `
+                            <li class="page-item ${i === page ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="loadHistory(${i}); return false;">${i}</a>
+                            </li>
+                        `;
+                    }
+                    
+                    pagination += '</ul></nav>';
+                    document.getElementById('historyPagination').innerHTML = pagination;
+                    document.getElementById('historyPagination').style.display = 'block';
+                } else {
+                    document.getElementById('historyPagination').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        async function loadHistoryStats() {
+            try {
+                const response = await fetch('/api/history/stats');
+                const stats = await response.json();
+                
+                if (stats.total_analyzed === 0) return;
+                
+                document.getElementById('historyStats').style.display = 'flex';
+                document.getElementById('historyTotal').textContent = stats.total_analyzed;
+                document.getElementById('historyAvgRisk').textContent = stats.avg_risk.toFixed(1);
+                document.getElementById('historyHighRisk').textContent = stats.recent_high_risk;
+                document.getElementById('historyMaxRisk').textContent = stats.max_risk;
+                
+                if (stats.trend && stats.trend.length > 0) {
+                    document.getElementById('trendChartContainer').style.display = 'block';
+                    loadTrendChart(stats.trend);
+                }
+                
+            } catch (error) {
+                console.error('Error loading history stats:', error);
+            }
+        }
+
+        function loadTrendChart(trendData) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+            
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: trendData.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Transactions',
+                            data: trendData.map(d => d.count),
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Avg Risk Score',
+                            data: trendData.map(d => d.avg_risk),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            yAxisID: 'y1',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Transaction Count'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Avg Risk Score'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                    }
+                }
+            });
+        }
+
+        function refreshHistory() {
+            loadHistory(1);
+        }
+
+        function exportHistory() {
+            window.location.href = '/api/history/export';
+        }
+
+        async function clearHistory() {
+            if (!confirm('Are you sure you want to clear all history? This cannot be undone!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/history/clear', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ History cleared successfully!');
+                    loadHistory(1);
+                } else {
+                    alert('❌ Error clearing history');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
