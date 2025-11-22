@@ -1,0 +1,11 @@
+ID,Name,Amount,Risk_Score,Classification,Alert
+1,Small Normal,0.5,15,Normal,🟢 SAFE
+2,Medium Normal,5.0,15,Normal,🟢 SAFE
+3,Large Normal,25.0,25,Normal,🟢 SAFE
+4,Slightly Suspicious,15.0,45,Normal,🟢 SAFE
+5,Medium Risk,30.0,70,Suspicious,🟡 MEDIUM RISK
+6,High Risk - Low Fee,60.0,85,Fraudulent,🟠 HIGH RISK
+7,High Risk - Mixing,45.0,90,Fraudulent,🔴 CRITICAL
+8,Critical - Large,150.0,100,Fraudulent,🔴 CRITICAL
+9,Critical - Many I/O,80.0,100,Fraudulent,🔴 CRITICAL
+10,Critical - Perfect Storm,200.0,100,Fraudulent,🔴 CRITICAL

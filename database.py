@@ -29,6 +29,23 @@ class WatchlistDB:
             )
         ''')
         
+        # ✅ ADD: Create transactions table on init
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transaction_id TEXT UNIQUE,
+                amount REAL,
+                num_inputs INTEGER,
+                num_outputs INTEGER,
+                fee REAL,
+                risk_score INTEGER,
+                prediction TEXT,
+                alert_level TEXT,
+                timestamp TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         conn.commit()
         conn.close()
         print("✅ Database initialized successfully!")
@@ -139,6 +156,68 @@ class WatchlistDB:
             "low": by_risk.get("LOW", 0),
             "active_this_week": active_week
         }
+
+    def add_transaction_result(self, result):
+        """Add analyzed transaction result to database"""
+        try:
+            # ✅ FIXED: Changed self.db_path to self.db_file
+            conn = sqlite3.connect(self.db_file)
+            cursor = conn.cursor()
+            
+            # Insert transaction (table already created in init_db)
+            cursor.execute('''
+                INSERT OR REPLACE INTO transactions 
+                (transaction_id, amount, num_inputs, num_outputs, fee, risk_score, prediction, alert_level, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                result['transaction_id'],
+                result['amount'],
+                result['num_inputs'],
+                result['num_outputs'],
+                result['fee'],
+                result['risk_score'],
+                result['prediction'],
+                result['alert_level'],
+                result['timestamp']
+            ))
+            
+            conn.commit()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error adding transaction result: {e}")
+            return False
+    
+    def get_recent_transactions(self, limit=100):
+        """Get recent analyzed transactions"""
+        try:
+            # ✅ FIXED: Changed self.db_path to self.db_file
+            conn = sqlite3.connect(self.db_file)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT transaction_id, amount, risk_score, prediction, alert_level, timestamp
+                FROM transactions
+                ORDER BY created_at DESC
+                LIMIT ?
+            ''', (limit,))
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            return [{
+                'transaction_id': row[0],
+                'amount': row[1],
+                'risk_score': row[2],
+                'prediction': row[3],
+                'alert_level': row[4],
+                'timestamp': row[5]
+            } for row in rows]
+            
+        except Exception as e:
+            print(f"❌ Error getting transactions: {e}")
+            return []
 
 # Initialize database when module is imported
 db = WatchlistDB()

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, send_file, make_response
+from flask import Flask, render_template, jsonify, request, send_file, make_response, Response
 import pandas as pd
 import numpy as np
 import joblib
@@ -18,12 +18,21 @@ from email.mime.base import MIMEBase
 from email import encoders
 import threading
 from database import db
+from blockchain_api import BlockchainAPI
+from ensemble_predictor import EnsemblePredictor
+
+# ✅ ADD THIS IMPORT (around line 10)
 
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
+try:
+    db.init_db()
+    print("✅ Database initialized successfully")
+except Exception as e:
+    print(f"❌ Database initialization failed: {e}")
 
 # Email configuration
 EMAIL_ENABLED = os.getenv('EMAIL_ENABLED', 'False').lower() == 'true'
@@ -43,8 +52,17 @@ MODELS_DIR = 'models'
 OUTPUTS_DIR = 'outputs'
 PROCESSED_DIR = 'processed_data'
 
-model = joblib.load(os.path.join(MODELS_DIR, 'chainguard_model.pkl'))
-scaler = joblib.load(os.path.join(MODELS_DIR, 'scaler.pkl'))
+# Load the ensemble predictor (uses 3 models)
+try:
+    ensemble = EnsemblePredictor()
+    print("✅ Ensemble models loaded successfully!")
+    USE_ENSEMBLE = True
+except Exception as e:
+    print(f"⚠️ Could not load ensemble, using single model: {e}")
+    model = joblib.load(os.path.join(MODELS_DIR, 'chainguard_model.pkl'))
+    scaler = joblib.load(os.path.join(MODELS_DIR, 'scaler.pkl'))
+    USE_ENSEMBLE = False
+    print("✅ Single model loaded as fallback")
 
 # Load results
 results_df = pd.read_csv(os.path.join(OUTPUTS_DIR, 'all_transaction_results.csv'))
@@ -63,8 +81,97 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # History file path
 HISTORY_FILE = 'history.json'
 
-# Watchlist (in-memory for demo)
-watchlist = []
+# Add this function after the imports and model loading (around line 50)
+
+def calculate_risk_score(transaction):
+    """
+    Calculate risk score for a transaction
+    
+    Args:
+        transaction (dict): Transaction data with keys:
+            - amount: Transaction amount in BTC
+            - num_inputs: Number of input addresses
+            - num_outputs: Number of output addresses
+            - fee: Transaction fee in BTC
+    
+    Returns:
+        dict: Risk assessment with score, prediction, and alert level
+    """
+    
+    amount = transaction.get('amount', 0)
+    num_inputs = transaction.get('num_inputs', 0)
+    num_outputs = transaction.get('num_outputs', 0)
+    fee = transaction.get('fee', 0.0001)
+    
+    # Base risk score
+    risk_score = 15
+    risk_factors = []
+    
+    # 1. Amount-based risk
+    if amount > 100:
+        risk_score += 30
+        risk_factors.append(f"Very large amount: {amount} BTC")
+    elif amount > 50:
+        risk_score += 20
+        risk_factors.append(f"Large amount: {amount} BTC")
+    elif amount > 20:
+        risk_score += 10
+        risk_factors.append(f"Medium amount: {amount} BTC")
+    
+    # 2. Input/Output complexity
+    total_io = num_inputs + num_outputs
+    if total_io > 50:
+        risk_score += 25
+        risk_factors.append(f"High I/O complexity: {total_io} addresses")
+    elif total_io > 30:
+        risk_score += 15
+        risk_factors.append(f"Moderate I/O complexity: {total_io} addresses")
+    
+    # 3. Fee analysis (detect abnormally low fees)
+    if amount > 0:
+        expected_fee = amount * 0.0001
+        if fee < expected_fee * 0.5:
+            risk_score += 20
+            risk_factors.append(f"Suspiciously low fee: {fee} BTC")
+    
+    # 4. Mixing pattern detection
+    if num_inputs > 5 and num_outputs > 5:
+        risk_score += 30
+        risk_factors.append("Possible mixing/tumbling pattern")
+    
+    # 5. Fund consolidation pattern
+    if num_inputs > 20:
+        risk_score += 12
+        risk_factors.append(f"Many inputs: {num_inputs}")
+    
+    # 6. Fund distribution pattern
+    if num_outputs > 20:
+        risk_score += 12
+        risk_factors.append(f"Many outputs: {num_outputs}")
+    
+    # Cap at 100
+    risk_score = min(100, risk_score)
+    
+    # Determine prediction and alert level
+    if risk_score >= 90:
+        prediction = "Fraudulent"
+        alert_level = "CRITICAL"
+    elif risk_score >= 75:
+        prediction = "Fraudulent"
+        alert_level = "HIGH"
+    elif risk_score >= 50:
+        prediction = "Suspicious"
+        alert_level = "MEDIUM"
+    else:
+        prediction = "Normal"
+        alert_level = "LOW"
+    
+    return {
+        'risk_score': risk_score,
+        'prediction': prediction,
+        'alert_level': alert_level,
+        'risk_factors': risk_factors
+    }
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -108,9 +215,18 @@ def home():
     """Main dashboard page"""
     return render_template('dashboard.html')
 
+def add_to_history(transaction_data):
+    """Add transaction to history (alias for save_to_history)"""
+    return save_to_history(transaction_data)
+
 @app.route('/api/stats')
 def get_stats():
     """Get dashboard statistics"""
+    try:
+        watchlist_count = len(db.get_all_watchlist())
+    except:
+        watchlist_count = 0
+    
     stats = {
         'total_scanned': len(results_df),
         'critical_alerts': len(results_df[results_df['Alert_Level'] == 'CRITICAL']),
@@ -118,7 +234,7 @@ def get_stats():
         'medium_alerts': len(results_df[results_df['Alert_Level'] == 'MEDIUM']),
         'accuracy': f"{(results_df['Correct_Prediction'] == '✅').sum() / len(results_df) * 100:.2f}",
         'avg_risk_score': f"{results_df['Risk_Score'].mean():.2f}",
-        'watchlist_count': len(watchlist)
+        'watchlist_count': watchlist_count
     }
     return jsonify(stats)
 
@@ -185,73 +301,92 @@ def search_transaction(tx_id):
     
     return jsonify(tx.iloc[0].to_dict())
 
-@app.route('/api/watchlist', methods=['GET', 'POST', 'DELETE'])
-def manage_watchlist():
-    """Manage watchlist"""
-    global watchlist
-    
-    if request.method == 'GET':
-        return jsonify(watchlist)
-    
-    elif request.method == 'POST':
-        data = request.json
-        tx_id = data.get('transaction_id')
-        
-        if tx_id not in watchlist:
-            watchlist.append(tx_id)
-        
-        return jsonify({'status': 'added', 'watchlist': watchlist})
-    
-    elif request.method == 'DELETE':
-        data = request.json
-        tx_id = data.get('transaction_id')
-        
-        if tx_id in watchlist:
-            watchlist.remove(tx_id)
-        
-        return jsonify({'status': 'removed', 'watchlist': watchlist})
+
 
 @app.route('/api/predict', methods=['POST'])
 def predict_new_transaction():
     """Predict risk for new transaction (demo with random test data)"""
-    X_test = np.load(os.path.join(PROCESSED_DIR, 'X_test.npy'))
-    random_idx = np.random.randint(0, len(X_test))
-    
-    features = X_test[random_idx]
-    
-    # Predict
-    prediction = model.predict([features])[0]
-    probability = model.predict_proba([features])[0][1]
-    risk_score = int(probability * 100)
-    
-    # Generate alert
-    if risk_score >= 90:
-        alert_level = 'CRITICAL'
-        alert_message = 'IMMEDIATE ACTION REQUIRED'
-        action = 'Freeze wallet immediately'
-    elif risk_score >= 75:
-        alert_level = 'HIGH'
-        alert_message = 'HIGH RISK DETECTED'
-        action = 'Flag wallet for investigation'
-    elif risk_score >= 50:
-        alert_level = 'MEDIUM'
-        alert_message = 'SUSPICIOUS ACTIVITY'
-        action = 'Add to watchlist'
-    else:
-        alert_level = 'LOW'
-        alert_message = 'Minor anomaly'
-        action = 'Log for review'
-    
-    result = {
-        'transaction_id': f"NEW_{random_idx}",
-        'prediction': 'Fraud' if prediction == 1 else 'Normal',
-        'risk_score': risk_score,
-        'alert_level': alert_level,
-        'alert_message': alert_message,
-        'recommended_action': action
-    }
-    
-    return jsonify(result)
+    try:
+        # Generate random transaction data
+        amount = np.random.uniform(0.1, 200)
+        num_inputs = np.random.randint(1, 80)
+        num_outputs = np.random.randint(1, 80)
+        fee = np.random.uniform(0.00001, 0.01)
+        
+        # Create transaction object
+        transaction = {
+            'amount': amount,
+            'num_inputs': num_inputs,
+            'num_outputs': num_outputs,
+            'fee': fee
+        }
+        
+        # Calculate risk score using proper function
+        risk_result = calculate_risk_score(transaction)
+        risk_score = risk_result['risk_score']
+        risk_factors = risk_result.get('risk_factors', [])
+        
+        # Enhance with ensemble if available
+        if USE_ENSEMBLE:
+            try:
+                result = ensemble.predict(amount, num_inputs, num_outputs, fee)
+                
+                # Adjust risk score based on ensemble confidence
+                if result['is_fraud'] and result['confidence'] > 75:
+                    risk_score = max(risk_score, 85)  # Boost if ensemble very confident
+                    risk_factors.append(f"🤖 AI Ensemble: {result['votes_for_fraud']}/3 models predict FRAUD ({result['confidence']:.1f}% confidence)")
+                elif not result['is_fraud'] and result['confidence'] < 25:
+                    risk_score = min(risk_score, 40)  # Lower if ensemble confident it's normal
+                    risk_factors.append(f"✅ AI Ensemble: All models agree - NORMAL transaction")
+            except Exception as e:
+                print(f"Ensemble prediction error: {e}")
+        
+        # Determine prediction
+        prediction = 1 if risk_score >= 50 else 0
+        
+        # Generate alert
+        if risk_score >= 90:
+            alert_level = 'CRITICAL'
+            alert_message = '🚨 IMMEDIATE ACTION REQUIRED'
+            action = 'Freeze wallet immediately'
+        elif risk_score >= 75:
+            alert_level = 'HIGH'
+            alert_message = '⚠️ HIGH RISK DETECTED'
+            action = 'Flag wallet for investigation'
+        elif risk_score >= 50:
+            alert_level = 'MEDIUM'
+            alert_message = '⚡ SUSPICIOUS ACTIVITY'
+            action = 'Add to watchlist'
+        elif risk_score >= 25:
+            alert_level = 'LOW'
+            alert_message = '👀 Minor anomaly'
+            action = 'Log for review'
+        else:
+            alert_level = 'NORMAL'
+            alert_message = '✅ Transaction appears normal'
+            action = 'Continue monitoring'
+        
+        result_data = {
+            'transaction_id': f"NEW_{np.random.randint(10000, 99999)}",
+            'prediction': 'Fraud' if prediction == 1 else 'Normal',
+            'risk_score': risk_score,
+            'alert_level': alert_level,
+            'alert_message': alert_message,
+            'recommended_action': action,
+            'risk_factors': risk_factors,
+            'details': {
+                'amount': round(amount, 4),
+                'num_inputs': num_inputs,
+                'num_outputs': num_outputs,
+                'fee': round(fee, 6)
+            }
+        }
+        
+        return jsonify(result_data)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/predict_custom', methods=['POST'])
 def predict_custom_transaction():
@@ -265,85 +400,50 @@ def predict_custom_transaction():
         num_outputs = int(data.get('num_outputs', 2))
         transaction_fee = float(data.get('fee', 0.0001))
         
-        # Load test data
-        X_test = np.load(os.path.join(PROCESSED_DIR, 'X_test.npy'))
-        y_test = np.load(os.path.join(PROCESSED_DIR, 'y_test.npy'))
+        # Create transaction object
+        transaction = {
+            'amount': transaction_amount,
+            'num_inputs': num_inputs,
+            'num_outputs': num_outputs,
+            'fee': transaction_fee
+        }
         
-        # Calculate median risk from NORMAL transactions only
-        normal_indices = np.where(y_test == 0)[0]
+        # Calculate risk score using proper function
+        risk_result = calculate_risk_score(transaction)
+        risk_score = risk_result['risk_score']
+        risk_factors = risk_result.get('risk_factors', [])
         
-        if len(normal_indices) > 100:
-            sample_indices = np.random.choice(normal_indices, 100, replace=False)
-            sample_features = X_test[sample_indices]
-            sample_predictions = model.predict_proba(sample_features)[:, 1]
-            base_probability = np.median(sample_predictions)
-        else:
-            base_probability = 0.10
-        
-        # Calculate risk adjustments
-        risk_adjustment = 0.0
-        
-        # Amount-based risk
-        if transaction_amount > 100:
-            risk_adjustment += 0.30
-        elif transaction_amount > 50:
-            risk_adjustment += 0.20
-        elif transaction_amount > 20:
-            risk_adjustment += 0.10
-        elif transaction_amount > 10:
-            risk_adjustment += 0.05
-        
-        # Input/Output complexity
-        total_io = num_inputs + num_outputs
-        if total_io > 50:
-            risk_adjustment += 0.25
-        elif total_io > 30:
-            risk_adjustment += 0.15
-        elif total_io > 15:
-            risk_adjustment += 0.08
-        elif total_io > 10:
-            risk_adjustment += 0.03
-        
-        # Fee anomalies
-        if transaction_amount > 10 and transaction_fee < 0.00001:
-            risk_adjustment += 0.20
-        elif transaction_amount > 5 and transaction_fee < 0.00005:
-            risk_adjustment += 0.10
-        
-        if transaction_fee > 0.01:
-            risk_adjustment += 0.15
-        elif transaction_fee > 0.005:
-            risk_adjustment += 0.08
-        
-        # Unusual input/output ratio
-        if num_inputs > 0:
-            io_ratio = num_outputs / num_inputs
-            if io_ratio > 10 or io_ratio < 0.1:
-                risk_adjustment += 0.12
-            elif io_ratio > 5 or io_ratio < 0.2:
-                risk_adjustment += 0.06
-        
-        # Many inputs
-        if num_inputs > 20:
-            risk_adjustment += 0.15
-        elif num_inputs > 10:
-            risk_adjustment += 0.08
-        
-        # Many outputs
-        if num_outputs > 20:
-            risk_adjustment += 0.15
-        elif num_outputs > 10:
-            risk_adjustment += 0.08
-        
-        # Calculate final probability
-        adjusted_probability = base_probability + risk_adjustment
-        adjusted_probability = max(0.0, min(1.0, adjusted_probability))
-        risk_score = int(adjusted_probability * 100)
+        # Enhance with ensemble if available
+        ensemble_details = None
+        if USE_ENSEMBLE:
+            try:
+                result = ensemble.predict(transaction_amount, num_inputs, num_outputs, transaction_fee)
+                
+                # Store ensemble details for display
+                ensemble_details = {
+                    'confidence': result['confidence'],
+                    'votes': result['ensemble_votes'],
+                    'votes_for_fraud': result['votes_for_fraud'],
+                    'is_fraud': result['is_fraud']
+                }
+                
+                # Adjust risk score based on ensemble
+                if result['is_fraud'] and result['confidence'] > 75:
+                    risk_score = max(risk_score, 85)
+                    risk_factors.append(f"🤖 AI Ensemble: {result['votes_for_fraud']}/3 models predict FRAUD ({result['confidence']:.1f}% confidence)")
+                elif not result['is_fraud'] and result['confidence'] < 25:
+                    risk_score = min(risk_score, 40)
+                    risk_factors.append(f"✅ AI Ensemble: {result['votes_for_normal']}/3 models predict NORMAL")
+                else:
+                    risk_factors.append(f"🤖 AI Ensemble: Mixed signals - {result['votes_for_fraud']}/3 vote fraud")
+                    
+            except Exception as e:
+                print(f"Ensemble prediction error: {e}")
         
         # Determine prediction
         prediction = 1 if risk_score >= 50 else 0
         
-        # Generate alert
+        # Generate alert based on FINAL risk score
         if risk_score >= 90:
             alert_level = 'CRITICAL'
             alert_message = '🚨 IMMEDIATE ACTION REQUIRED'
@@ -373,7 +473,7 @@ def predict_custom_transaction():
         # Generate transaction ID
         random_idx = np.random.randint(10000, 99999)
         
-        result = {
+        result_data = {
             'transaction_id': f"CUSTOM_{random_idx}",
             'prediction': 'Fraud' if prediction == 1 else 'Normal',
             'risk_score': risk_score,
@@ -381,50 +481,98 @@ def predict_custom_transaction():
             'alert_message': alert_message,
             'recommended_action': action,
             'color': color,
+            'risk_factors': risk_factors,
+            'ensemble_details': ensemble_details,
+            'using_ensemble': USE_ENSEMBLE,
             'details': {
                 'amount': transaction_amount,
                 'num_inputs': num_inputs,
                 'num_outputs': num_outputs,
-                'fee': transaction_fee,
-                'base_risk': int(base_probability * 100),
-                'adjustment': f"+{int(risk_adjustment * 100)}"
+                'fee': transaction_fee
             }
         }
         
-        # Trigger alert if needed
-        if risk_score >= ALERT_THRESHOLD_HIGH:
-            alert_type = 'CRITICAL' if risk_score >= ALERT_THRESHOLD_CRITICAL else 'HIGH'
-            trigger_alert_async({
-                'transaction_id': result['transaction_id'],
-                'amount': transaction_amount,
-                'num_inputs': num_inputs,
-                'num_outputs': num_outputs,
-                'fee': transaction_fee,
-                'risk_score': risk_score,
-                'alert_level': alert_level,
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'recommended_action': action
-            }, alert_type)
-        
         # Save to history
         history_entry = {
-            'transaction_id': result['transaction_id'],
+            'transaction_id': result_data['transaction_id'],
             'amount': transaction_amount,
             'num_inputs': num_inputs,
             'num_outputs': num_outputs,
             'fee': transaction_fee,
             'risk_score': risk_score,
             'alert_level': alert_level,
-            'prediction': result['prediction'],
+            'prediction': result_data['prediction'],
             'alert_message': alert_message,
-            'recommended_action': action
+            'recommended_action': action,
+            'timestamp': datetime.now().isoformat()
         }
         save_to_history(history_entry)
         
-        return jsonify(result)
+        # Trigger alert if needed
+        if risk_score >= ALERT_THRESHOLD_HIGH:
+            alert_type = 'CRITICAL' if risk_score >= ALERT_THRESHOLD_CRITICAL else 'HIGH'
+            trigger_alert_async(history_entry, alert_type)
+        
+        return jsonify(result_data)
         
     except Exception as e:
+        print(f"Error in predict_custom: {e}")
         return jsonify({'error': str(e)}), 400
+    
+
+# Add this route (around line 300, after other routes)
+@app.route('/api/fetch-live-transactions', methods=['POST'])
+def fetch_live_transactions():
+    """Fetch real transactions from blockchain"""
+    try:
+        data = request.json
+        count = int(data.get('count', 10))
+        
+        # Initialize API
+        api = BlockchainAPI()
+        
+        # Fetch transactions
+        transactions = api.fetch_latest_transactions(count=count)
+        
+        if not transactions:
+            return jsonify({'error': 'Failed to fetch transactions'}), 500
+        
+        # Analyze each transaction with our model
+        analyzed_results = []
+        for tx in transactions:
+            # Calculate risk score
+            risk_result = calculate_risk_score(tx)
+            
+            analyzed_results.append({
+                'transaction_id': tx['transaction_id'],
+                'amount': tx['amount'],
+                'num_inputs': tx['num_inputs'],
+                'num_outputs': tx['num_outputs'],
+                'fee': tx['fee'],
+                'risk_score': risk_result['risk_score'],
+                'prediction': risk_result['prediction'],
+                'alert_level': risk_result['alert_level'],
+                'timestamp': datetime.fromtimestamp(tx['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
+            })
+        
+        # Save to database
+        for result in analyzed_results:
+            db.add_transaction_result(result)
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(analyzed_results),
+            'transactions': analyzed_results
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/live-monitoring')
+def live_monitoring():
+    """Live blockchain monitoring page"""
+    return render_template('live_monitoring.html')
 
 # ============================================
 # FEATURE 1: EXPORT REPORTS
@@ -626,6 +774,7 @@ def batch_upload():
         
         results = []
         
+        # ✅ ANALYZE EACH TRANSACTION
         for idx, row in df.iterrows():
             try:
                 amount = float(row['amount'])
@@ -633,65 +782,22 @@ def batch_upload():
                 num_outputs = int(row['num_outputs'])
                 fee = float(row['fee'])
                 
-                X_test = np.load(os.path.join(PROCESSED_DIR, 'X_test.npy'))
-                y_test = np.load(os.path.join(PROCESSED_DIR, 'y_test.npy'))
+                # ✅ USE ENSEMBLE IF AVAILABLE
+                if USE_ENSEMBLE:
+                    result = ensemble.predict(amount, num_inputs, num_outputs, fee)
+                    risk_score = int(result['confidence'])
+                else:
+                    # Fallback: use calculate_risk_score
+                    transaction = {
+                        'amount': amount,
+                        'num_inputs': num_inputs,
+                        'num_outputs': num_outputs,
+                        'fee': fee
+                    }
+                    risk_result = calculate_risk_score(transaction)
+                    risk_score = risk_result['risk_score']
                 
-                normal_indices = np.where(y_test == 0)[0]
-                sample_indices = np.random.choice(normal_indices, min(100, len(normal_indices)), replace=False)
-                sample_predictions = model.predict_proba(X_test[sample_indices])[:, 1]
-                base_probability = np.median(sample_predictions)
-                
-                risk_adjustment = 0.0
-                
-                if amount > 100:
-                    risk_adjustment += 0.30
-                elif amount > 50:
-                    risk_adjustment += 0.20
-                elif amount > 20:
-                    risk_adjustment += 0.10
-                elif amount > 10:
-                    risk_adjustment += 0.05
-                
-                total_io = num_inputs + num_outputs
-                if total_io > 50:
-                    risk_adjustment += 0.25
-                elif total_io > 30:
-                    risk_adjustment += 0.15
-                elif total_io > 15:
-                    risk_adjustment += 0.08
-                elif total_io > 10:
-                    risk_adjustment += 0.03
-                
-                if amount > 10 and fee < 0.00001:
-                    risk_adjustment += 0.20
-                elif amount > 5 and fee < 0.00005:
-                    risk_adjustment += 0.10
-                
-                if fee > 0.01:
-                    risk_adjustment += 0.15
-                elif fee > 0.005:
-                    risk_adjustment += 0.08
-                
-                if num_inputs > 0:
-                    io_ratio = num_outputs / num_inputs
-                    if io_ratio > 10 or io_ratio < 0.1:
-                        risk_adjustment += 0.12
-                    elif io_ratio > 5 or io_ratio < 0.2:
-                        risk_adjustment += 0.06
-                
-                if num_inputs > 20:
-                    risk_adjustment += 0.15
-                elif num_inputs > 10:
-                    risk_adjustment += 0.08
-                
-                if num_outputs > 20:
-                    risk_adjustment += 0.15
-                elif num_outputs > 10:
-                    risk_adjustment += 0.08
-                
-                adjusted_probability = max(0.0, min(1.0, base_probability + risk_adjustment))
-                risk_score = int(adjusted_probability * 100)
-                
+                # Determine alert level
                 if risk_score >= 90:
                     alert_level = 'CRITICAL'
                 elif risk_score >= 75:
@@ -720,6 +826,7 @@ def batch_upload():
                     'error': str(e)
                 })
         
+        # ✅ CALCULATE SUMMARY STATISTICS
         valid_results = [r for r in results if 'error' not in r]
         
         summary = {
@@ -731,17 +838,19 @@ def batch_upload():
             'medium_count': len([r for r in valid_results if r['alert_level'] == 'MEDIUM']),
             'low_count': len([r for r in valid_results if r['alert_level'] == 'LOW']),
             'normal_count': len([r for r in valid_results if r['alert_level'] == 'NORMAL']),
-            'avg_risk_score': np.mean([r['risk_score'] for r in valid_results]) if valid_results else 0,
+            'avg_risk_score': round(np.mean([r['risk_score'] for r in valid_results]), 2) if valid_results else 0,
             'max_risk_score': max([r['risk_score'] for r in valid_results]) if valid_results else 0,
             'min_risk_score': min([r['risk_score'] for r in valid_results]) if valid_results else 0
         }
         
+        # ✅ SAVE RESULTS TO CSV
         results_filename = f"batch_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         results_filepath = os.path.join(OUTPUTS_DIR, results_filename)
         
         results_df_batch = pd.DataFrame(valid_results)
         results_df_batch.to_csv(results_filepath, index=False)
         
+        # Clean up uploaded file
         os.remove(filepath)
         
         return jsonify({
@@ -1124,22 +1233,55 @@ def get_alert_history():
 # WATCHLIST API ENDPOINTS
 # ============================================
 
-@app.route('/api/watchlist', methods=['GET'])
-def get_watchlist():
+@app.route('/api/watchlist', methods=['GET', 'POST', 'DELETE'])
+def manage_watchlist_legacy():
+    """Legacy watchlist endpoint for compatibility"""
+    if request.method == 'GET':
+        try:
+            watchlist_items = db.get_all_watchlist()
+            return jsonify({
+                'success': True,
+                'data': watchlist_items,
+                'watchlist': [item['value'] for item in watchlist_items]
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    elif request.method == 'POST':
+        try:
+            data = request.json
+            transaction_id = data.get('transaction_id')
+            
+            if transaction_id:
+                result = db.add_to_watchlist(
+                    type='transaction',
+                    value=str(transaction_id),
+                    risk_level='HIGH',
+                    reason='Added from dashboard',
+                    tags=[],
+                    notes=f'Transaction ID: {transaction_id}'
+                )
+                return jsonify(result)
+            else:
+                return jsonify({'success': False, 'error': 'Missing transaction_id'}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/watchlist/items', methods=['GET'])
+def get_watchlist_items():
     """Get all watchlist items"""
     try:
-        watchlist = db.get_all_watchlist()
+        watchlist_items = db.get_all_watchlist()
         return jsonify({
             'success': True,
-            'data': watchlist,
-            'count': len(watchlist)
+            'data': watchlist_items,
+            'count': len(watchlist_items)
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @app.route('/api/watchlist/add', methods=['POST'])
-def add_to_watchlist():
+def add_to_watchlist_endpoint():
     """Add new item to watchlist"""
     try:
         data = request.json
@@ -1147,18 +1289,25 @@ def add_to_watchlist():
         # Validate required fields
         required_fields = ['type', 'value', 'risk_level', 'reason']
         for field in required_fields:
-            if field not in data:
+            if field not in data or not data[field]:
                 return jsonify({
                     'success': False,
-                    'error': f'Missing required field: {field}'
+                    'error': f'Missing or empty required field: {field}'
                 }), 400
+        
+        # Check if value already exists
+        if db.check_watchlist(data['value']):
+            return jsonify({
+                'success': False,
+                'error': f'{data["type"].title()} "{data["value"]}" is already in the watchlist'
+            }), 409
         
         result = db.add_to_watchlist(
             type=data['type'],
             value=data['value'],
             risk_level=data['risk_level'],
             reason=data['reason'],
-            tags=data.get('tags', []),
+            tags=data.get('tags', []) if isinstance(data.get('tags'), list) else [],
             notes=data.get('notes', '')
         )
         
@@ -1166,9 +1315,8 @@ def add_to_watchlist():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @app.route('/api/watchlist/<int:watchlist_id>', methods=['DELETE'])
-def remove_from_watchlist(watchlist_id):
+def remove_from_watchlist_endpoint(watchlist_id):
     """Remove item from watchlist"""
     try:
         result = db.remove_from_watchlist(watchlist_id)
@@ -1176,9 +1324,8 @@ def remove_from_watchlist(watchlist_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @app.route('/api/watchlist/check/<value>', methods=['GET'])
-def check_watchlist(value):
+def check_watchlist_endpoint(value):
     """Check if value is on watchlist"""
     try:
         is_watched = db.check_watchlist(value)
@@ -1190,9 +1337,8 @@ def check_watchlist(value):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @app.route('/api/watchlist/stats', methods=['GET'])
-def get_watchlist_stats():
+def get_watchlist_stats_endpoint():
     """Get watchlist statistics"""
     try:
         stats = db.get_watchlist_stats()
@@ -1203,12 +1349,11 @@ def get_watchlist_stats():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
 @app.route('/api/watchlist/export', methods=['GET'])
-def export_watchlist():
+def export_watchlist_endpoint():
     """Export watchlist as CSV"""
     try:
-        watchlist = db.get_all_watchlist()
+        watchlist_items = db.get_all_watchlist()
         
         # Create CSV
         output = io.StringIO()
@@ -1219,14 +1364,14 @@ def export_watchlist():
                         'Activity Count', 'Added Date', 'Last Seen', 'Total Volume', 'Notes'])
         
         # Write data
-        for item in watchlist:
+        for item in watchlist_items:
             writer.writerow([
                 item['id'],
                 item['type'],
                 item['value'],
                 item['risk_level'],
                 item['reason'],
-                ', '.join(item['tags']),
+                ', '.join(item['tags']) if item['tags'] else '',
                 item['activity_count'],
                 item['added_date'],
                 item['last_seen'] or 'N/A',
@@ -1383,6 +1528,9 @@ from datetime import datetime, timedelta
 import hashlib
 import time
 
+
+
+    
 # ============================================
 # ANALYTICS API ENDPOINTS
 # ============================================
