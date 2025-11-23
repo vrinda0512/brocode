@@ -17,6 +17,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import threading
+import hashlib
+import secrets
+from ecdsa import SigningKey, SECP256k1, VerifyingKey, BadSignatureError
 from database import db
 from blockchain_api import BlockchainAPI
 from ensemble_predictor import EnsemblePredictor
@@ -46,6 +49,11 @@ SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
 ALERT_THRESHOLD_CRITICAL = int(os.getenv('ALERT_THRESHOLD_CRITICAL', 90))
 ALERT_THRESHOLD_HIGH = int(os.getenv('ALERT_THRESHOLD_HIGH', 75))
 ALERT_THRESHOLD_MEDIUM = int(os.getenv('ALERT_THRESHOLD_MEDIUM', 50))
+
+# Base transaction fee used to derive fee from inputs/outputs when user does not provide fee
+# Formula used by the app and dashboard JS:
+# Transaction Fee (BTC) = BASE_TRANSACTION_FEE + (inputs * 0.00002) + (outputs * 0.000015)
+BASE_TRANSACTION_FEE = float(os.getenv('BASE_TRANSACTION_FEE', 0.00005))
 
 # Load model and data
 MODELS_DIR = 'models'
@@ -80,6 +88,68 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # History file path
 HISTORY_FILE = 'history.json'
+
+# Security salt for hashing sensitive identifiers (wallets, user IDs, etc.)
+SECURITY_SALT = os.getenv('SECURITY_SALT', 'dev_default_salt')
+
+def obfuscate_identifier(identifier: str) -> str:
+    """One-way, salted hash for sensitive identifiers.
+
+    This is used to obfuscate wallet addresses, sender IDs, etc. so the
+    ML / analytics pipeline only ever sees pseudonymous IDs.
+    """
+    if not identifier:
+        return ""
+    value = f"{SECURITY_SALT}:{identifier}".encode("utf-8")
+    digest = hashlib.sha256(value).hexdigest()
+    return digest[:16]
+
+
+# ================= WALLET CRYPTO HELPERS =================
+
+def public_key_to_address(public_key_hex: str) -> str:
+    """Derive a simple wallet address from a public key.
+
+    This is NOT a real blockchain address format. We take a SHA-256 hash
+    of the raw public key bytes and keep the last 40 hex chars, prefixed
+    with 0x, to simulate an address.
+    """
+    try:
+        pk_bytes = bytes.fromhex(public_key_hex)
+    except Exception:
+        return ""
+
+    digest = hashlib.sha256(pk_bytes).hexdigest()
+    return "0x" + digest[-40:]
+
+
+def generate_wallet_keys():
+    """Generate a new ECDSA keypair and derived wallet address."""
+    sk = SigningKey.generate(curve=SECP256k1)
+    vk = sk.get_verifying_key()
+
+    private_key_hex = sk.to_string().hex()
+    public_key_hex = vk.to_string().hex()
+    address = public_key_to_address(public_key_hex)
+
+    return private_key_hex, public_key_hex, address
+
+
+def sign_wallet_message(private_key_hex: str, message: str) -> str:
+    """Sign an arbitrary message with a hex-encoded private key."""
+    sk = SigningKey.from_string(bytes.fromhex(private_key_hex), curve=SECP256k1)
+    signature = sk.sign(message.encode("utf-8"))
+    return signature.hex()
+
+
+def verify_wallet_message(public_key_hex: str, message: str, signature_hex: str) -> bool:
+    """Verify that signature matches message for the given public key."""
+    try:
+        vk = VerifyingKey.from_string(bytes.fromhex(public_key_hex), curve=SECP256k1)
+        vk.verify(bytes.fromhex(signature_hex), message.encode("utf-8"))
+        return True
+    except (BadSignatureError, Exception):
+        return False
 
 # Add this function after the imports and model loading (around line 50)
 
@@ -398,7 +468,13 @@ def predict_custom_transaction():
         transaction_amount = float(data.get('amount', 1.5))
         num_inputs = int(data.get('num_inputs', 2))
         num_outputs = int(data.get('num_outputs', 2))
-        transaction_fee = float(data.get('fee', 0.0001))
+        # Compute transaction fee from inputs/outputs using agreed formula
+        # Transaction Fee (BTC) = BASE_TRANSACTION_FEE + (inputs * 0.00002) + (outputs * 0.000015)
+        transaction_fee = (
+            BASE_TRANSACTION_FEE +
+            (num_inputs * 0.00002) +
+            (num_outputs * 0.000015)
+        )
         
         # Create transaction object
         transaction = {
@@ -484,12 +560,12 @@ def predict_custom_transaction():
             'risk_factors': risk_factors,
             'ensemble_details': ensemble_details,
             'using_ensemble': USE_ENSEMBLE,
-            'details': {
-                'amount': transaction_amount,
-                'num_inputs': num_inputs,
-                'num_outputs': num_outputs,
-                'fee': transaction_fee
-            }
+                'details': {
+                    'amount': transaction_amount,
+                    'num_inputs': num_inputs,
+                    'num_outputs': num_outputs,
+                    'fee': transaction_fee
+                }
         }
         
         # Save to history
@@ -1399,7 +1475,12 @@ def predict_custom():
         amount = float(data.get('amount', 0))
         num_inputs = int(data.get('num_inputs', 1))
         num_outputs = int(data.get('num_outputs', 1))
-        fee = float(data.get('fee', 0))
+        # Compute fee from inputs/outputs using same formula as dashboard
+        fee = (
+            BASE_TRANSACTION_FEE +
+            (num_inputs * 0.00002) +
+            (num_outputs * 0.000015)
+        )
         sender_address = data.get('sender_address', '')  # New field
         receiver_address = data.get('receiver_address', '')  # New field
         
@@ -1519,6 +1600,222 @@ def predict_custom():
             'receiver_watchlisted': receiver_watchlisted
         })
         
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================
+# WALLET API ENDPOINTS
+# ============================================
+
+@app.route('/api/wallet/generate', methods=['POST'])
+def api_wallet_generate():
+    """Generate a new simulated wallet (no blockchain)."""
+    private_key, public_key, address = generate_wallet_keys()
+    return jsonify({
+        'success': True,
+        'private_key': private_key,
+        'public_key': public_key,
+        'address': address
+    })
+
+
+@app.route('/api/wallet/sign', methods=['POST'])
+def api_wallet_sign():
+    """Sign an arbitrary message using a hex-encoded private key."""
+    data = request.json or {}
+    private_key = data.get('private_key')
+    message = data.get('message', '')
+
+    if not private_key or not message:
+        return jsonify({'success': False, 'error': 'private_key and message are required'}), 400
+
+    try:
+        signature = sign_wallet_message(private_key, message)
+        # Derive public key and address from the provided private key
+        sk = SigningKey.from_string(bytes.fromhex(private_key), curve=SECP256k1)
+        vk = sk.get_verifying_key()
+        public_key = vk.to_string().hex()
+        address = public_key_to_address(public_key)
+
+        return jsonify({
+            'success': True,
+            'signature': signature,
+            'public_key': public_key,
+            'address': address
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/wallet/verify', methods=['POST'])
+def api_wallet_verify():
+    """Verify that a signature matches a message and public key."""
+    data = request.json or {}
+    public_key = data.get('public_key', '')
+    message = data.get('message', '')
+    signature = data.get('signature', '')
+
+    if not public_key or not message or not signature:
+        return jsonify({'success': False, 'error': 'public_key, message and signature are required'}), 400
+
+    try:
+        is_valid = verify_wallet_message(public_key, message, signature)
+        address = public_key_to_address(public_key) if is_valid else None
+        return jsonify({
+            'success': True,
+            'valid': is_valid,
+            'address': address
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/wallet/scan', methods=['POST'])
+def api_wallet_scan():
+    """Verify a signed message and run it through the risk engine."""
+    try:
+        data = request.json or {}
+
+        public_key = data.get('public_key', '')
+        message = data.get('message', '')
+        signature = data.get('signature', '')
+        amount = float(data.get('amount', 0) or 0)
+        receiver_address = data.get('receiver_address', '') or ''
+
+        if not public_key or not message or not signature:
+            return jsonify({'success': False, 'error': 'public_key, message and signature are required'}), 400
+
+        # Signature validity
+        signature_valid = verify_wallet_message(public_key, message, signature)
+        wallet_address = public_key_to_address(public_key)
+
+        # Obfuscate identifiers before any storage/analysis
+        obfuscated_sender = obfuscate_identifier(wallet_address) if wallet_address else None
+        obfuscated_receiver = obfuscate_identifier(receiver_address) if receiver_address else None
+
+        # Watchlist checks use real addresses but are never exposed to ML directly
+        sender_watchlisted = db.check_watchlist(wallet_address) if wallet_address else False
+        receiver_watchlisted = db.check_watchlist(receiver_address) if receiver_address else False
+
+        # --- Base risk using existing risk engine ---
+        base_tx = {
+            'amount': amount,
+            'num_inputs': 1,
+            'num_outputs': 1,
+            'fee': 0.0,
+        }
+        base_result = calculate_risk_score(base_tx)
+        risk_score = float(base_result.get('risk_score', 10.0))
+        risk_factors = list(base_result.get('risk_factors', []))
+
+        # Invalid signature is an immediate red flag
+        if not signature_valid:
+            risk_score = max(risk_score, 95.0)
+            risk_factors.append("Signature verification failed (message or signature tampered)")
+
+        # Watchlist boost
+        if sender_watchlisted or receiver_watchlisted:
+            risk_score += 40
+            if sender_watchlisted:
+                risk_factors.append("⚠️ Sender wallet is WATCHLISTED")
+                db.update_activity(wallet_address, amount)
+            if receiver_watchlisted and receiver_address:
+                risk_factors.append("⚠️ Receiver wallet is WATCHLISTED")
+                db.update_activity(receiver_address, amount)
+
+        # Message-content heuristics for common scam language
+        lowered = message.lower()
+        keyword_boosts = {
+            "urgent": 10,
+            "immediately": 10,
+            "now": 5,
+            "gift": 8,
+            "airdrop": 12,
+            "giveaway": 12,
+            "double": 10,
+            "seed phrase": 25,
+            "private key": 25,
+            "withdraw all": 15,
+        }
+
+        for kw, inc in keyword_boosts.items():
+            if kw in lowered:
+                risk_score += inc
+                risk_factors.append(f"Suspicious phrase detected in message: '{kw}' (+{inc}%)")
+
+        # Clamp risk score
+        risk_score = max(0.0, min(100.0, risk_score))
+
+        # Determine alert level and recommendation (Bootstrap-friendly colors)
+        if risk_score >= 90:
+            alert_level = "CRITICAL"
+            alert_color = "danger"
+            recommendation = "🚨 IMMEDIATE ACTION: Reject transaction and investigate wallet owner"
+        elif risk_score >= 75:
+            alert_level = "HIGH"
+            alert_color = "warning"
+            recommendation = "⚠️ URGENT: Manual review required within 1 hour"
+        elif risk_score >= 50:
+            alert_level = "MEDIUM"
+            alert_color = "info"
+            recommendation = "⚡ CAUTION: Add wallet to watchlist and monitor closely"
+        elif risk_score >= 25:
+            alert_level = "LOW"
+            alert_color = "secondary"
+            recommendation = "📝 LOG: Record and review during routine checks"
+        else:
+            alert_level = "NORMAL"
+            alert_color = "success"
+            recommendation = "✅ SAFE: No immediate action required"
+
+        prediction_label = "Fraudulent" if risk_score >= 50 else "Legitimate"
+
+        # Create anonymized history entry (no raw message stored)
+        message_hash = hashlib.sha256(message.encode('utf-8')).hexdigest()[:16]
+        tx_id = hashlib.sha256(
+            f"{wallet_address}{receiver_address}{amount}{message_hash}{time.time()}wallet".encode('utf-8')
+        ).hexdigest()[:16]
+
+        history_entry = {
+            'transaction_id': tx_id,
+            'timestamp': datetime.now().isoformat(),
+            'amount': amount,
+            'num_inputs': 1,
+            'num_outputs': 1,
+            'fee': 0.0,
+            'risk_score': round(risk_score, 2),
+            'alert_level': alert_level,
+            'prediction': 1 if risk_score >= 50 else 0,
+            'actual': None,
+            'risk_factors': risk_factors,
+            'recommended_action': recommendation,
+            'sender_watchlisted': sender_watchlisted,
+            'receiver_watchlisted': receiver_watchlisted,
+            'sender_id_obfuscated': obfuscated_sender,
+            'receiver_id_obfuscated': obfuscated_receiver,
+            'source': 'wallet',
+            'message_hash': message_hash,
+        }
+
+        add_to_history(history_entry)
+
+        return jsonify({
+            'success': True,
+            'transaction_id': tx_id,
+            'signature_valid': signature_valid,
+            'recovered_address': wallet_address,
+            'risk_score': round(risk_score, 2),
+            'alert_level': alert_level,
+            'alert_color': alert_color,
+            'prediction': prediction_label,
+            'recommendation': recommendation,
+            'risk_factors': risk_factors,
+            'watchlist_alert': sender_watchlisted or receiver_watchlisted,
+            'sender_watchlisted': sender_watchlisted,
+            'receiver_watchlisted': receiver_watchlisted,
+        })
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
