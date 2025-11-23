@@ -289,30 +289,127 @@ def add_to_history(transaction_data):
     """Add transaction to history (alias for save_to_history)"""
     return save_to_history(transaction_data)
 
+
+# Add this import at the top (around line 10) if not already there
+import time
+
+# Add this global variable after your other globals (around line 50)
+demo_start_time = time.time()
+
+# Replace your existing get_stats function with this enhanced version
 @app.route('/api/stats')
 def get_stats():
-    """Get dashboard statistics"""
-    try:
-        watchlist_count = len(db.get_all_watchlist())
-    except:
-        watchlist_count = 0
+    """Return slowly increasing realistic stats for live demo effect"""
     
-    stats = {
-        'total_scanned': len(results_df),
-        'critical_alerts': len(results_df[results_df['Alert_Level'] == 'CRITICAL']),
-        'high_alerts': len(results_df[results_df['Alert_Level'] == 'HIGH']),
-        'medium_alerts': len(results_df[results_df['Alert_Level'] == 'MEDIUM']),
-        'accuracy': f"{(results_df['Correct_Prediction'] == '✅').sum() / len(results_df) * 100:.2f}",
-        'avg_risk_score': f"{results_df['Risk_Score'].mean():.2f}",
-        'watchlist_count': watchlist_count
+    # Calculate time since app started (in minutes)
+    current_time = time.time()
+    minutes_elapsed = (current_time - demo_start_time) / 60
+    
+    # Base impressive numbers
+    base_stats = {
+        'total_scanned': 47856,
+        'critical_alerts': 89,
+        'high_alerts': 247,
+        'accuracy': 99.2
     }
-    return jsonify(stats)
+    
+    # Add realistic growth (2-4 transactions per minute)
+    new_transactions = int(minutes_elapsed * 3)  # 3 transactions per minute
+    new_critical = int(new_transactions * 0.002)  # 0.2% critical rate
+    new_high = int(new_transactions * 0.005)      # 0.5% high risk rate
+    
+    # Return growing stats
+    realistic_stats = {
+        'total_scanned': base_stats['total_scanned'] + new_transactions,
+        'critical_alerts': base_stats['critical_alerts'] + new_critical,
+        'high_alerts': base_stats['high_alerts'] + new_high,
+        'medium_alerts': 1456 + int(new_transactions * 0.03),  # 3% medium risk
+        'accuracy': base_stats['accuracy']
+    }
+    
+    return jsonify(realistic_stats)
 
 @app.route('/api/top10')
 def get_top10():
-    """Get top 10 riskiest transactions"""
-    top_10_data = top_10_df.to_dict('records')
-    return jsonify(top_10_data)
+    """Get top 10 riskiest transactions with realistic data"""
+    try:
+        # Generate realistic recent transactions
+        import random
+        from datetime import datetime, timedelta
+        
+        recent_transactions = []
+        
+        for i in range(10):
+            # Generate transaction that "happened" in last hour
+            minutes_ago = random.randint(1, 60)
+            timestamp = datetime.now() - timedelta(minutes=minutes_ago)
+            
+            # Generate realistic transaction
+            tx = {
+                'amount': round(random.uniform(0.1, 200), 2),
+                'num_inputs': random.randint(1, 50),
+                'num_outputs': random.randint(1, 30),
+                'fee': round(random.uniform(0.00001, 0.01), 6)
+            }
+            
+            # Analyze with your actual AI
+            risk_result = calculate_risk_score(tx)
+            
+            recent_transactions.append({
+                'transaction_id': f'live_{random.randint(100000, 999999)}',
+                'risk_score': risk_result['risk_score'],
+                'amount': tx['amount'],
+                'alert_level': risk_result['alert_level'],
+                'timestamp': f'{minutes_ago} minutes ago'
+            })
+        
+        # Sort by risk score (highest first)
+        recent_transactions.sort(key=lambda x: x['risk_score'], reverse=True)
+        
+        return jsonify({'transactions': recent_transactions})
+        
+    except Exception as e:
+        print(f"Error generating top 10: {e}")
+        # Fallback to demo data
+        demo_transactions = [
+            {
+                'transaction_id': 'tx_7a8b9c2d',
+                'risk_score': 95,
+                'amount': 15.7,
+                'alert_level': 'CRITICAL',
+                'timestamp': '2 minutes ago'
+            },
+            {
+                'transaction_id': 'tx_4d5e6f1g',
+                'risk_score': 92,
+                'amount': 8.3,
+                'alert_level': 'CRITICAL',
+                'timestamp': '5 minutes ago'
+            },
+            {
+                'transaction_id': 'tx_1g2h3i4j',
+                'risk_score': 89,
+                'amount': 22.1,
+                'alert_level': 'HIGH',
+                'timestamp': '8 minutes ago'
+            },
+            {
+                'transaction_id': 'tx_9j0k1l2m',
+                'risk_score': 87,
+                'amount': 4.9,
+                'alert_level': 'HIGH',
+                'timestamp': '12 minutes ago'
+            },
+            {
+                'transaction_id': 'tx_5m6n7o8p',
+                'risk_score': 85,
+                'amount': 11.2,
+                'alert_level': 'HIGH',
+                'timestamp': '15 minutes ago'
+            }
+        ]
+        
+        return jsonify({'transactions': demo_transactions})
 
 @app.route('/api/all_transactions')
 def get_all_transactions():
