@@ -12,73 +12,126 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
+        /* Updated background to crypto theme dark navy */
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0D0F1A;
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
         }
         
         .dashboard-container {
             padding: 30px;
         }
         
+        .dashboard-text,.alert-text {
+            color: #0D0F1A;
+        }
+
+
+        /* Updated stat cards to crypto theme colors */
         .stat-card {
-            background: white;
+            background: #131722;
             border-radius: 15px;
             padding: 25px;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             transition: transform 0.3s;
+            border: 1px solid #1A2332;
         }
         
         .stat-card:hover {
             transform: translateY(-5px);
+            border-color: #0EF6FF;
         }
         
         .stat-value {
             font-size: 2.5rem;
             font-weight: bold;
-            color: #667eea;
+            color: #0EF6FF;
         }
         
         .stat-label {
-            color: #666;
+            color: #ffffff;
             font-size: 0.9rem;
             text-transform: uppercase;
         }
         
         .header {
-            background: white;
+            background: #131722;
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid #1A2332;
         }
         
+        .header h1 {
+            color: #0EF6FF;
+        }
+
+        .header p {
+            color: #ffffff;
+        }
+        
+        /* Updated button to match crypto theme */
         .btn-scan {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0EF6FF;
             border: none;
             padding: 15px 40px;
             font-size: 1.1rem;
             border-radius: 50px;
-            color: white;
+            color: #0D0F1A;
             font-weight: bold;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px rgba(14, 246, 255, 0.3);
             transition: all 0.3s;
         }
         
         .btn-scan:hover {
             transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+            box-shadow: 0 8px 25px rgba(14, 246, 255, 0.5);
+            background: #14FFEC;
+        }
+
+        /* Freeze Wallet button (hidden by default). Visible when scan result shows medium/high/critical alerts */
+        .freeze-wallet-btn {
+            display: none;
+            background: linear-gradient(90deg,#ff4d4f,#d9363e);
+            border: none;
+            padding: 12px 20px;
+            color: #ffffff;
+            font-weight: 700;
+            border-radius: 10px;
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 6px 18px rgba(217, 54, 62, 0.25);
+            cursor: pointer;
+            transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+        }
+
+        .freeze-wallet-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(217, 54, 62, 0.35);
+            filter: brightness(1.06);
+        }
+
+        /* Use modern CSS :has() so the button appears when the scan result container contains a high/medium/critical alert
+           Matches server/client-rendered alert classes like alert-danger, alert-warning, alert-info (assumed >=50 risk)
+           Placed on the column wrapper so innerHTML replacement of #wallet-scan-result won't remove the button. */
+        .col-md-4:has(#wallet-scan-result .alert-danger) .freeze-wallet-btn,
+        .col-md-4:has(#wallet-scan-result .alert-warning) .freeze-wallet-btn,
+        .col-md-4:has(#wallet-scan-result .alert-info) .freeze-wallet-btn {
+            display: block;
         }
         
         .transaction-card {
-            background: white;
+            background: #131722;
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 15px;
-            border-left: 5px solid #667eea;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid #0EF6FF;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: #ffffff;
         }
         
         .risk-badge {
@@ -89,34 +142,35 @@
         }
         
         .risk-critical {
-            background: #ff4757;
+            background: #F05454;
             color: white;
         }
         
         .risk-high {
-            background: #ff6348;
-            color: white;
+            background: #FFD369;
+            color: #0D0F1A;
         }
         
         .risk-medium {
-            background: #ffa502;
-            color: white;
+            background: #FFD369;
+            color: #0D0F1A;
         }
         
         .risk-low {
-            background: #26de81;
-            color: white;
+            background: #34D399;
+            color: #0D0F1A;
         }
         
         .risk-normal {
-            background: #20bf6b;
-            color: white;
+            background: #34D399;
+            color: #0D0F1A;
         }
         
         .loading {
             display: none;
             text-align: center;
             padding: 20px;
+            color: #ffffff;
         }
         
         .spinner-border {
@@ -139,7 +193,86 @@
                 transform: scale(1);
             }
         }
+
+        /* Reduced chart container sizes, updated background to #131722, and ensured text is white */
+        .chart-container {
+            background: #131722;
+            border: 1px solid #1A2332;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .chart-container h6 {
+            color: #0EF6FF;
+            font-size: 0.95rem;
+        }
+
+        canvas {
+            max-height: 200px !important;
+        }
+
+        /* Ensure all text on dark backgrounds is white */
+        .form-label {
+            color: #ffffff;
+        }
+
+        .form-control {
+            background: #1A2332;
+            border: 1px solid #0EF6FF;
+            color: #ffffff;
+        }
+
+        .form-control::placeholder {
+            color: #999;
+        }
+
+        .form-control:focus {
+            background: #1A2332;
+            border-color: #0EF6FF;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.2rem rgba(14, 246, 255, 0.25);
+        }
+
+        textarea.form-control {
+            background: #1A2332;
+            color: #ffffff;
+        }
+
+        .bg-light {
+            background: #1A2332 !important;
+            color: #ffffff;
+        }
+
+        .text-muted {
+            color: #999 !important;
+        }
+
+        .alert {
+            background: #131722;
+            border: 1px solid #1A2332;
+            color: #ffffff;
+        }
+
+        .alert-info {
+            background: #131722;
+            border-color: #0EF6FF;
+            color: #ffffff;
+        }
+
+        .alert-info strong {
+            color: #0EF6FF;
+        }
+
+        h4, h5, h6 {
+            color: #ffffff;
+        }
+
+        small {
+            color: #999;
+        }
     </style>
+
 </head>
 <body>
         <!-- Add this navigation bar -->
@@ -148,14 +281,6 @@
             <a class="navbar-brand" href="/">
                 <strong>🛡️ ChainGuard</strong>
             </a>
-            <div class="d-flex">
-                <a href="/" class="btn btn-outline-light btn-sm me-2">
-                    🏠 Dashboard
-                </a>
-                <a href="/live-monitoring" class="btn btn-success btn-sm">
-                    📡 Live Monitoring
-                </a>
-            </div>
         </div>
     </nav>
     <div class="dashboard-container">
@@ -253,8 +378,8 @@
                         <div class="mb-3">
                             <label for="txFee" class="form-label">⚡ Transaction Fee (BTC)</label>
                             <input type="number" class="form-control" id="txFee" 
-                                   step="0.000001" value="0.0001" min="0" required>
-                            <small class="text-muted">Network fee paid (typically 0.0001-0.001 BTC)</small>
+                                   step="0.000001" value="0.00005" min="0" readonly>
+                            <small class="text-muted">Automatically calculated from inputs/outputs</small>
                         </div>
                         
                         <button type="submit" class="btn btn-scan w-100">
@@ -269,9 +394,85 @@
                     </div>
                     
                     <div id="customScanPlaceholder" class="text-center" style="padding: 50px;">
-                        <div style="font-size: 4rem; color: #ccc;">📊</div>
                         <p class="text-muted mt-3">Enter transaction details and click "Analyze" to see AI prediction</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WALLET TOOLS SECTION -->
+        <div class="stat-card mt-4" id="wallet-tools">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-8">
+                    <h4 class="mb-1">🔐 Wallet Tools</h4>
+                    <p class="text-muted mb-0">Generate a simulated wallet, sign & verify messages, and scan signed intents with the AI risk engine.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button id="btn-generate-wallet" class="btn btn-scan">
+                        🧬 Generate Wallet
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Wallet Identity Column -->
+                <div class="col-md-4 mb-4">
+                    <h6 class="mb-3">1️⃣ Wallet Identity</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Wallet Address</label>
+                        <div class="form-control bg-light" id="wallet-address" style="font-family: monospace; font-size: 0.85rem; min-height: 40px;">
+                            <span class="text-muted">Click "Generate Wallet" to create a new address</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Public Key</label>
+                        <textarea class="form-control bg-light" id="wallet-public-key" rows="3" readonly style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">Private Key (demo only)</label>
+                        <textarea class="form-control bg-light" id="wallet-private-key" rows="3" readonly style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                        <small class="text-muted">Never use these keys on a real network. This wallet is for simulation only.</small>
+                    </div>
+                </div>
+
+                <!-- Signing & Verification Column -->
+                <div class="col-md-4 mb-4">
+                    <h6 class="mb-3">2️⃣ Sign & Verify Message</h6>
+                    <div class="mb-3">
+                        <label for="wallet-message" class="form-label">Message to Sign</label>
+                        <textarea class="form-control" id="wallet-message" rows="4" placeholder="e.g., Transfer 2 ETH from me to 0xReceiver...">Transfer 2 BTC from me to receiver</textarea>
+                    </div>
+                    <div class="d-grid gap-2 mb-3">
+                        <button id="btn-sign-message" class="btn btn-outline-primary">✍️ Sign Message</button>
+                        <button id="btn-verify-message" class="btn btn-outline-secondary">✅ Verify Signature</button>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">Signature</label>
+                        <textarea class="form-control bg-light" id="wallet-signature" rows="3" readonly style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                    </div>
+                    <div id="wallet-verify-status" class="mt-2"></div>
+                </div>
+
+                <!-- Risk Engine Column -->
+                <div class="col-md-4 mb-4">
+                    <h6 class="mb-3">3️⃣ Scan with Risk Engine</h6>
+                    <div class="mb-2">
+                        <label class="form-label">Transfer Amount (BTC)</label>
+                        <input type="number" step="0.0001" min="0" class="form-control" id="wallet-amount" placeholder="2.0" value="2.0">
+                        <small class="text-muted">Used as a feature for the risk model.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Receiver Address (optional)</label>
+                        <input type="text" class="form-control" id="wallet-receiver" placeholder="receiver...">
+                    </div>
+                    <button id="btn-scan-wallet" class="btn btn-scan w-100 mb-3">
+                        🔎 Scan Signed Intent with AI
+                    </button>
+                    <!-- Freeze Wallet button: shown only when scan result indicates medium/high/critical risk (>=50). -->
+                    <button id="btn-freeze-wallet" class="freeze-wallet-btn" title="Freeze this wallet (demo)">
+                        ❄️ Freeze Wallet
+                    </button>
+                    <div id="wallet-scan-result" style="min-height: 120px;"></div>
                 </div>
             </div>
         </div>
@@ -316,7 +517,6 @@
                     </div>
                     
                     <div id="batchPlaceholder" class="text-center" style="padding: 50px;">
-                        <div style="font-size: 4rem; color: #ccc;">📊</div>
                         <p class="text-muted mt-3">Upload a CSV file to analyze multiple transactions at once</p>
                     </div>
                 </div>
@@ -392,17 +592,32 @@
         <!-- FEATURE 4: Alert System -->
         <div class="stat-card mt-4">
             <div class="row align-items-center mb-4">
-                <div class="col-md-6">
-                    <h4 class="mb-0">🔔 Alert System Configuration</h4>
-                </div>
-                <div class="col-md-6 text-end">
-                    <button class="btn btn-sm btn-outline-success" onclick="loadAlertConfig()">
-                        🔄 Refresh Config
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning" onclick="sendTestAlert()">
-                        📧 Send Test Alert
-                    </button>
-                </div>
+                <div class="row" style="color: #FFFFFF;">
+    <div class="col-md-6">
+        <h4 class="mb-0" style="color: #FFFFFF;">
+            🔔 Alert System Configuration
+        </h4>
+    </div>
+
+    <div class="col-md-6 text-end">
+
+        <!-- Refresh Button -->
+        <button class="btn btn-sm btn-outline-success"
+                onclick="loadAlertConfig()"
+                style="color: #FFFFFF; border-color: #FFFFFF;">
+            🔄 Refresh Config
+        </button>
+
+        <!-- Test Alert Button -->
+        <button class="btn btn-sm btn-outline-warning"
+                onclick="sendTestAlert()"
+                style="color: #FFFFFF; border-color: #FFFFFF;">
+            📧 Send Test Alert
+        </button>
+
+    </div>
+</div>
+
             </div>
             
             <div class="row">
@@ -422,15 +637,15 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="alertEmail" class="form-label">Alert Email Address</label>
+                                <label for="alertEmail" class="form-label" style="color: #0D0F1A;"><strong>Alert Email Address</strong></label>
                                 <input type="email" class="form-control" id="alertEmail" placeholder="security@example.com">
                             </div>
                             
                             <hr>
                             
-                            <h6>Risk Thresholds</h6>
+                            <h6 class="alert-text">Risk Thresholds</h6>
                             <div class="mb-3">
-                                <label for="thresholdCritical" class="form-label">
+                                <label for="thresholdCritical" class="form-label" style="color:#0D0F1A;">
                                     🚨 Critical Alert Threshold: <span id="criticalValue">90</span>
                                 </label>
                                 <input type="range" class="form-range" id="thresholdCritical" min="50" max="100" value="90" 
@@ -438,7 +653,7 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="thresholdHigh" class="form-label">
+                                <label for="thresholdHigh" class="form-label" style="color:#0D0F1A;">
                                     ⚠️ High Risk Threshold: <span id="highValue">75</span>
                                 </label>
                                 <input type="range" class="form-range" id="thresholdHigh" min="50" max="100" value="75"
@@ -446,7 +661,7 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="thresholdMedium" class="form-label">
+                                <label for="thresholdMedium" class="form-label" style="color:#0D0F1A;">
                                     ⚡ Medium Risk Threshold: <span id="mediumValue">50</span>
                                 </label>
                                 <input type="range" class="form-range" id="thresholdMedium" min="25" max="75" value="50"
@@ -507,13 +722,13 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="border rounded p-3 bg-white shadow-sm">
-                <h6 class="text-center mb-3">📈 Risk Trend (Last 7 Days)</h6>
+                <h6 class="dashboard-text text-center mb-3">📈 Risk Trend (Last 7 Days)</h6>
                 <canvas id="riskTrendChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
         <div class="col-md-6">
             <div class="border rounded p-3 bg-white shadow-sm">
-                <h6 class="text-center mb-3">📉 Alert Timeline (Last 7 Days)</h6>
+                <h6 class="dashboard-text text-center mb-3">📉 Alert Timeline (Last 7 Days)</h6>
                 <canvas id="alertTimelineChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
@@ -523,13 +738,13 @@
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="border rounded p-3 bg-white shadow-sm">
-                <h6 class="text-center mb-3">💰 Risk by Transaction Volume</h6>
+                <h6 class="dashboard-text text-center mb-3">💰 Risk by Transaction Volume</h6>
                 <canvas id="volumeAnalysisChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
         <div class="col-md-6">
             <div class="border rounded p-3 bg-white shadow-sm">
-                <h6 class="text-center mb-3">🔥 Top Fraud Patterns Detected</h6>
+                <h6 class="dashboard-text text-center mb-3">🔥 Top Fraud Patterns Detected</h6>
                 <canvas id="topPatternsChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
@@ -539,13 +754,13 @@
     <div class="row">
         <div class="col-md-8">
             <div class="border rounded p-3 bg-white shadow-sm">
-                <h6 class="text-center mb-3">⏰ Risk Heatmap by Hour</h6>
+                <h6 class="dashboard-text text-center mb-3">⏰ Risk Heatmap by Hour</h6>
                 <canvas id="hourlyHeatmapChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
         <div class="col-md-4">
             <div class="border rounded p-3 bg-white shadow-sm">
-                <h6 class="text-center mb-3">🎯 Model Performance</h6>
+                <h6 class="dashboard-text text-center mb-3">🎯 Model Performance</h6>
                 <div id="accuracyMetrics" style="text-align: center; min-height: 300px;">
                     <div class="spinner-border text-primary mt-5" role="status">
                         <span class="sr-only">Loading...</span>
@@ -830,14 +1045,14 @@ console.log('✅ Analytics script loaded - MANUAL MODE ONLY');
                 </div>
                 <div class="col-md-6 text-end">
                     <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="exportData('csv', 'top10')">
+                        <button class="btn btn-sm btn-outline-primary m-1" onclick="exportData('csv', 'top10')">
                             📊 Export CSV
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="exportData('pdf', 'summary')">
+                        <button class="btn btn-sm btn-outline-danger m-1" onclick="exportData('pdf', 'summary')">
                             📄 Export PDF Report
                         </button>
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle m-1" data-bs-toggle="dropdown">
                                 More Exports
                             </button>
                             <ul class="dropdown-menu">
@@ -866,7 +1081,249 @@ console.log('✅ Analytics script loaded - MANUAL MODE ONLY');
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
+    <!-- WALLET TOOLS FRONTEND LOGIC -->
+    <script>
+    let currentWallet = null;
+
+    function renderWalletIdentity(wallet) {
+        const addrEl = document.getElementById('wallet-address');
+        const pkEl = document.getElementById('wallet-public-key');
+        const skEl = document.getElementById('wallet-private-key');
+        if (!addrEl || !pkEl || !skEl) return;
+
+        if (!wallet) {
+            addrEl.innerHTML = '<span class="text-muted">Click "Generate Wallet" to create a new address</span>';
+            pkEl.value = '';
+            skEl.value = '';
+            return;
+        }
+
+        addrEl.textContent = wallet.address;
+        pkEl.value = wallet.public_key;
+        skEl.value = wallet.private_key;
+    }
+
+    function setWalletStatus(elementId, type, message) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (!message) {
+            el.innerHTML = '';
+            return;
+        }
+        const cls = type === 'success' ? 'alert-success'
+                 : type === 'error' ? 'alert-danger'
+                 : 'alert-info';
+        el.innerHTML = `<div class="alert ${cls} py-2 mb-0">${message}</div>`;
+    }
+
+    async function handleGenerateWallet() {
+        try {
+            setWalletStatus('wallet-verify-status', null, '');
+            const scanEl = document.getElementById('wallet-scan-result');
+            if (scanEl) scanEl.innerHTML = '';
+
+            const btn = document.getElementById('btn-generate-wallet');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Generating...';
+            }
+
+            const res = await fetch('/api/wallet/generate', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Failed to generate wallet');
+
+            currentWallet = {
+                private_key: data.private_key,
+                public_key: data.public_key,
+                address: data.address
+            };
+            renderWalletIdentity(currentWallet);
+            setWalletStatus('wallet-verify-status', 'success', 'New wallet generated successfully.');
+        } catch (err) {
+            setWalletStatus('wallet-verify-status', 'error', 'Error generating wallet: ' + err.message);
+        } finally {
+            const btn = document.getElementById('btn-generate-wallet');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🧬 Generate Wallet';
+            }
+        }
+    }
+
+    async function handleSignMessage() {
+        try {
+            if (!currentWallet || !currentWallet.private_key) {
+                setWalletStatus('wallet-verify-status', 'error', 'Generate a wallet first before signing.');
+                return;
+            }
+            const msgEl = document.getElementById('wallet-message');
+            const sigEl = document.getElementById('wallet-signature');
+            if (!msgEl || !sigEl) return;
+
+            const message = msgEl.value.trim();
+            if (!message) {
+                setWalletStatus('wallet-verify-status', 'error', 'Please enter a message to sign.');
+                return;
+            }
+
+            const res = await fetch('/api/wallet/sign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ private_key: currentWallet.private_key, message })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Failed to sign message');
+
+            currentWallet.public_key = data.public_key;
+            currentWallet.address = data.address;
+            renderWalletIdentity(currentWallet);
+
+            sigEl.value = data.signature;
+            setWalletStatus('wallet-verify-status', 'success', 'Message signed successfully. You can now verify or scan it.');
+        } catch (err) {
+            setWalletStatus('wallet-verify-status', 'error', 'Error signing message: ' + err.message);
+        }
+    }
+
+    async function handleVerifyMessage() {
+        try {
+            const pkEl = document.getElementById('wallet-public-key');
+            const msgEl = document.getElementById('wallet-message');
+            const sigEl = document.getElementById('wallet-signature');
+            if (!pkEl || !msgEl || !sigEl) return;
+
+            const public_key = pkEl.value.trim();
+            const message = msgEl.value.trim();
+            const signature = sigEl.value.trim();
+
+            if (!public_key || !message || !signature) {
+                setWalletStatus('wallet-verify-status', 'error', 'Public key, message, and signature are required to verify.');
+                return;
+            }
+
+            const res = await fetch('/api/wallet/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ public_key, message, signature })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Verification failed');
+
+            if (data.valid) {
+                setWalletStatus('wallet-verify-status', 'success', `✅ Signature is valid. Recovered address: <code>${data.address}</code>`);
+            } else {
+                setWalletStatus('wallet-verify-status', 'error', '❌ Signature is NOT valid for this message/public key.');
+            }
+        } catch (err) {
+            setWalletStatus('wallet-verify-status', 'error', 'Error verifying signature: ' + err.message);
+        }
+    }
+
+    async function handleScanWallet() {
+        const resultEl = document.getElementById('wallet-scan-result');
+        const msgEl = document.getElementById('wallet-message');
+        const pkEl = document.getElementById('wallet-public-key');
+        const sigEl = document.getElementById('wallet-signature');
+        const amtEl = document.getElementById('wallet-amount');
+        const recvEl = document.getElementById('wallet-receiver');
+        if (!resultEl || !msgEl || !pkEl || !sigEl || !amtEl) return;
+
+        const message = msgEl.value.trim();
+        const public_key = pkEl.value.trim();
+        const signature = sigEl.value.trim();
+        const amount = parseFloat(amtEl.value || '0') || 0;
+        const receiver_address = (recvEl && recvEl.value.trim()) || '';
+
+        if (!public_key || !message || !signature) {
+            resultEl.innerHTML = '<div class="alert alert-danger">Please generate a wallet, sign a message, and ensure public key + signature are present first.</div>';
+            return;
+        }
+
+        try {
+            resultEl.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Scanning signed intent with AI...</p></div>';
+
+            const res = await fetch('/api/wallet/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ public_key, message, signature, amount, receiver_address })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Scan failed');
+
+            const badgeClass = data.alert_level === 'CRITICAL' ? 'risk-critical'
+                : data.alert_level === 'HIGH' ? 'risk-high'
+                : data.alert_level === 'MEDIUM' ? 'risk-medium'
+                : data.alert_level === 'LOW' ? 'risk-low'
+                : 'risk-normal';
+
+            const bsAlertClass = data.alert_color === 'danger' ? 'alert-danger'
+                : data.alert_color === 'warning' ? 'alert-warning'
+                : data.alert_color === 'info' ? 'alert-info'
+                : data.alert_color === 'secondary' ? 'alert-secondary'
+                : 'alert-success';
+
+            const riskFactorsHtml = (data.risk_factors || []).length
+                ? '<ul class="mb-0 small">' + data.risk_factors.map(f => `<li>${f}</li>`).join('') + '</ul>'
+                : '<p class="mb-0 small text-muted">No specific high-risk patterns detected.</p>';
+
+            const watchlistNotice = data.watchlist_alert
+                ? '<div class="alert alert-danger mt-2 mb-0 py-2"><strong>Watchlist hit detected.</strong> Either sender or receiver is on the watchlist.</div>'
+                : '';
+
+            resultEl.innerHTML = `
+                <div class="${bsAlertClass} border-start border-4 p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="small text-muted">Recovered Wallet Address</div>
+                            <div style="font-family: monospace; font-size: 0.85rem;">${data.recovered_address || 'N/A'}</div>
+                            <div class="mt-1">
+                                <span class="badge bg-${data.signature_valid ? 'success' : 'danger'}">
+                                    ${data.signature_valid ? 'Signature VALID' : 'Signature INVALID'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="display-6 fw-bold mb-0">${data.risk_score}</div>
+                            <div class="small text-muted">Risk Score / 100</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="risk-badge ${badgeClass}">${data.alert_level}</span>
+                            <span class="badge bg-${data.risk_score >= 50 ? 'danger' : 'success'} ms-2">${data.prediction}</span>
+                        </div>
+                        <div class="small text-muted">TX ID: <code>${data.transaction_id}</code></div>
+                    </div>
+                    <div class="mb-2 small">
+                        <strong>Recommended Action:</strong><br>
+                        ${data.recommendation}
+                    </div>
+                    <div class="mb-0">
+                        <strong class="small">Key Risk Factors:</strong>
+                        ${riskFactorsHtml}
+                    </div>
+                    ${watchlistNotice}
+                </div>
+            `;
+        } catch (err) {
+            resultEl.innerHTML = `<div class="alert alert-danger">Error scanning signed message: ${err.message}</div>`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const genBtn = document.getElementById('btn-generate-wallet');
+        const signBtn = document.getElementById('btn-sign-message');
+        const verifyBtn = document.getElementById('btn-verify-message');
+        const scanBtn = document.getElementById('btn-scan-wallet');
+
+        if (genBtn) genBtn.addEventListener('click', handleGenerateWallet);
+        if (signBtn) signBtn.addEventListener('click', handleSignMessage);
+        if (verifyBtn) verifyBtn.addEventListener('click', handleVerifyMessage);
+        if (scanBtn) scanBtn.addEventListener('click', handleScanWallet);
+    });
+    </script>
+
     <script>
         // Load dashboard data
         async function loadDashboard() {
@@ -1058,6 +1515,29 @@ console.log('✅ Analytics script loaded - MANUAL MODE ONLY');
         
         // Handle custom transaction form submission
         document.addEventListener('DOMContentLoaded', function() {
+            // Fee calculation formula must match server: BASE + inputs*0.00002 + outputs*0.000015
+            const BASE_TRANSACTION_FEE = 0.00005;
+
+            function computeFee(inputs, outputs) {
+                return BASE_TRANSACTION_FEE + (inputs * 0.00002) + (outputs * 0.000015);
+            }
+
+            const txInputsEl = document.getElementById('txInputs');
+            const txOutputsEl = document.getElementById('txOutputs');
+            const txFeeEl = document.getElementById('txFee');
+
+            function updateFeeDisplay() {
+                const inputs = parseInt(txInputsEl.value) || 0;
+                const outputs = parseInt(txOutputsEl.value) || 0;
+                const fee = computeFee(inputs, outputs);
+                txFeeEl.value = fee.toFixed(6);
+            }
+
+            // Initialize fee display and update on changes
+            updateFeeDisplay();
+            txInputsEl.addEventListener('input', updateFeeDisplay);
+            txOutputsEl.addEventListener('input', updateFeeDisplay);
+
             document.getElementById('customTransactionForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
@@ -1069,11 +1549,16 @@ console.log('✅ Analytics script loaded - MANUAL MODE ONLY');
                 resultDiv.style.display = 'block';
                 detailsDiv.innerHTML = '<div class="loading" style="display:block;"><div class="spinner-border text-primary"></div><p class="mt-3">Analyzing transaction with AI...</p></div>';
                 
+                // Compute fee client-side using same formula (server will also compute/verify)
+                const inputs = parseInt(document.getElementById('txInputs').value) || 0;
+                const outputs = parseInt(document.getElementById('txOutputs').value) || 0;
+                const fee = computeFee(inputs, outputs);
+
                 const formData = {
                     amount: parseFloat(document.getElementById('txAmount').value),
-                    num_inputs: parseInt(document.getElementById('txInputs').value),
-                    num_outputs: parseInt(document.getElementById('txOutputs').value),
-                    fee: parseFloat(document.getElementById('txFee').value)
+                    num_inputs: inputs,
+                    num_outputs: outputs,
+                    fee: parseFloat(fee)
                 };
                 
                 try {
