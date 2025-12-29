@@ -12,9 +12,7 @@ import warnings
 import os
 warnings.filterwarnings('ignore')
 
-# ============================================
-# SET UP FOLDER PATHS
-# ============================================
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'processed_data')
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
@@ -25,9 +23,6 @@ print("CHAINGUARD - STEP 3: TRAINING THE AI FRAUD DETECTOR")
 print("=" * 70)
 print(f"\n📁 Working directory: {BASE_DIR}")
 
-# ============================================
-# PART 1: LOAD THE PREPARED DATA
-# ============================================
 print("\n📂 Loading preprocessed data from Step 2...")
 
 X = np.load(os.path.join(PROCESSED_DIR, 'X_data.npy'))
@@ -37,14 +32,11 @@ print(f"✅ Loaded data successfully!")
 print(f"   Features (X): {X.shape}")
 print(f"   Labels (y): {y.shape}")
 
-# ============================================
-# PART 2: SPLIT INTO TRAINING & TESTING SETS
-# ============================================
+
 print("\n" + "=" * 70)
 print("📊 SPLITTING DATA INTO TRAIN & TEST SETS")
 print("=" * 70)
 
-# 70% training, 30% testing
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, 
     test_size=0.3,      # 30% for testing
@@ -56,15 +48,12 @@ print(f"\n✅ Data split complete!")
 print(f"   Training set: {X_train.shape[0]} transactions ({X_train.shape[0]/len(X)*100:.1f}%)")
 print(f"   Testing set: {X_test.shape[0]} transactions ({X_test.shape[0]/len(X)*100:.1f}%)")
 
-# Check class distribution
 train_fraud = (y_train == 1).sum()
 test_fraud = (y_test == 1).sum()
 print(f"\n   Fraud in training: {train_fraud} ({train_fraud/len(y_train)*100:.1f}%)")
 print(f"   Fraud in testing: {test_fraud} ({test_fraud/len(y_test)*100:.1f}%)")
 
-# ============================================
-# PART 3: SCALE THE FEATURES
-# ============================================
+
 print("\n" + "=" * 70)
 print("⚖️  SCALING FEATURES (Normalizing data)")
 print("=" * 70)
@@ -75,9 +64,7 @@ X_test_scaled = scaler.transform(X_test)
 
 print("✅ Features scaled! (This helps the AI learn better)")
 
-# ============================================
-# PART 4: TRAIN MODEL #1 - RANDOM FOREST
-# ============================================
+
 print("\n" + "=" * 70)
 print("🌲 TRAINING MODEL #1: RANDOM FOREST")
 print("=" * 70)
@@ -112,16 +99,13 @@ print(f"   Precision: {rf_precision*100:.2f}% (How many flagged transactions are
 print(f"   Recall:    {rf_recall*100:.2f}% (How many frauds we caught)")
 print(f"   F1-Score:  {rf_f1*100:.2f}% (Overall balance)")
 
-# ============================================
-# PART 5: TRAIN MODEL #2 - XGBOOST (BEST!)
-# ============================================
+
 print("\n" + "=" * 70)
 print("🚀 TRAINING MODEL #2: XGBOOST (The Champion!)")
 print("=" * 70)
 
 print("\n⏳ Training XGBoost... (this takes 30-60 seconds)")
 
-# Calculate scale_pos_weight to handle imbalance
 scale_weight = (y_train == 0).sum() / (y_train == 1).sum()
 
 xgb_model = XGBClassifier(
@@ -154,9 +138,7 @@ print(f"   Precision: {xgb_precision*100:.2f}% (How many flagged transactions ar
 print(f"   Recall:    {xgb_recall*100:.2f}% (How many frauds we caught)")
 print(f"   F1-Score:  {xgb_f1*100:.2f}% (Overall balance)")
 
-# ============================================
-# PART 6: COMPARE MODELS
-# ============================================
+
 print("\n" + "=" * 70)
 print("🏆 MODEL COMPARISON")
 print("=" * 70)
@@ -171,7 +153,6 @@ comparison = pd.DataFrame({
 
 print("\n", comparison.to_string(index=False))
 
-# Pick the best model (higher F1-score)
 if xgb_f1 >= rf_f1:
     best_model = xgb_model
     best_name = "XGBoost"
@@ -189,9 +170,7 @@ else:
 
 print(f"\n🏆 WINNER: {best_name} (F1-Score: {best_f1*100:.2f}%)")
 
-# ============================================
-# PART 7: CREATE VISUALIZATIONS
-# ============================================
+
 print("\n" + "=" * 70)
 print("📊 CREATING PERFORMANCE VISUALIZATIONS")
 print("=" * 70)
@@ -268,9 +247,7 @@ viz_path = os.path.join(VIZ_DIR, 'model_performance.png')
 plt.savefig(viz_path, dpi=300, bbox_inches='tight')
 print(f"✅ Saved visualization: {viz_path}")
 
-# ============================================
-# PART 8: SAVE THE TRAINED MODEL
-# ============================================
+
 print("\n" + "=" * 70)
 print("💾 SAVING TRAINED MODEL")
 print("=" * 70)
@@ -298,18 +275,14 @@ print(f"   → {X_test_path}")
 print(f"   → {y_test_path}")
 print(f"   → {risk_path}")
 
-# ============================================
-# PART 9: DETAILED CLASSIFICATION REPORT
-# ============================================
+
 print("\n" + "=" * 70)
 print("📋 DETAILED CLASSIFICATION REPORT")
 print("=" * 70)
 
 print("\n", classification_report(y_test, best_pred, target_names=['Normal', 'Fraud']))
 
-# ============================================
-# FINAL SUMMARY
-# ============================================
+
 print("\n" + "=" * 70)
 print("🎉 STEP 3 COMPLETE!")
 print("=" * 70)

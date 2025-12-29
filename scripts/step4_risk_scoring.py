@@ -5,9 +5,7 @@ import hashlib
 import os
 from datetime import datetime
 
-# ============================================
-# SET UP FOLDER PATHS
-# ============================================
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'processed_data')
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
@@ -18,9 +16,7 @@ print("CHAINGUARD - STEP 4: RISK SCORING & ALERT SYSTEM")
 print("=" * 70)
 print(f"\n📁 Working directory: {BASE_DIR}")
 
-# ============================================
-# PART 1: LOAD TRAINED MODEL & TEST DATA
-# ============================================
+
 print("\n📂 Loading trained model and test data...")
 
 # Load the trained model and scaler
@@ -36,9 +32,7 @@ print(f"✅ Loaded successfully!")
 print(f"   Test transactions: {len(X_test)}")
 print(f"   Model type: {type(model).__name__}")
 
-# ============================================
-# PART 2: RISK SCORING FUNCTIONS
-# ============================================
+
 print("\n" + "=" * 70)
 print("🎯 CREATING RISK SCORING SYSTEM")
 print("=" * 70)
@@ -124,9 +118,7 @@ print("   • calculate_risk_score() - Converts probability to 0-100 scale")
 print("   • generate_alert() - Maps risk to actionable alerts")
 print("   • obfuscate_transaction_id() - Privacy-preserving hashing")
 
-# ============================================
-# PART 3: ANALYZE ALL TEST TRANSACTIONS
-# ============================================
+
 print("\n" + "=" * 70)
 print("🔍 ANALYZING ALL TEST TRANSACTIONS")
 print("=" * 70)
@@ -172,9 +164,7 @@ print(f"   Total transactions analyzed: {len(df_results)}")
 print(f"   Correct predictions: {(df_results['Correct_Prediction'] == '✅').sum()}")
 print(f"   Accuracy: {(df_results['Correct_Prediction'] == '✅').sum() / len(df_results) * 100:.2f}%")
 
-# ============================================
-# PART 4: IDENTIFY TOP 10 RISKIEST TRANSACTIONS
-# ============================================
+
 print("\n" + "=" * 70)
 print("🚨 TOP 10 RISKIEST TRANSACTIONS")
 print("=" * 70)
@@ -194,9 +184,7 @@ for idx, row in top_10_risky.iterrows():
     print(f"   Action: {row['Recommended_Action']}")
     print("-" * 70)
 
-# ============================================
-# PART 5: RISK DISTRIBUTION ANALYSIS
-# ============================================
+
 print("\n" + "=" * 70)
 print("📊 RISK DISTRIBUTION ANALYSIS")
 print("=" * 70)
@@ -219,9 +207,7 @@ for label in ['Normal', 'Fraud']:
     print(f"      Max Risk Score: {subset['Risk_Score'].max()}")
     print(f"      Min Risk Score: {subset['Risk_Score'].min()}")
 
-# ============================================
-# PART 6: SAVE REPORTS
-# ============================================
+
 print("\n" + "=" * 70)
 print("💾 SAVING REPORTS")
 print("=" * 70)
@@ -245,9 +231,7 @@ alert_summary_path = os.path.join(OUTPUTS_DIR, 'alert_summary.csv')
 alert_summary.to_csv(alert_summary_path)
 print(f"✅ Saved: {alert_summary_path}")
 
-# ============================================
-# PART 7: CREATE ACTIONABLE SECURITY REPORT
-# ============================================
+
 print("\n" + "=" * 70)
 print("📋 GENERATING SECURITY REPORT")
 print("=" * 70)
@@ -296,9 +280,7 @@ with open(report_path, 'w', encoding='utf-8') as f:
 
 print(f"✅ Saved: {report_path}")
 
-# ============================================
-# PART 8: DEMO - SINGLE TRANSACTION PREDICTION
-# ============================================
+
 print("\n" + "=" * 70)
 print("🎬 DEMO: REAL-TIME TRANSACTION ANALYSIS")
 print("=" * 70)

@@ -9,9 +9,7 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 
-# ============================================
-# SET UP FOLDER PATHS
-# ============================================
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = os.path.join(BASE_DIR, 'processed_data')
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
@@ -23,9 +21,7 @@ print("CHAINGUARD - STEP 5: UNSUPERVISED LEARNING (ISOLATION FOREST)")
 print("=" * 70)
 print(f"\n📁 Working directory: {BASE_DIR}")
 
-# ============================================
-# PART 1: LOAD DATA
-# ============================================
+
 print("\n" + "=" * 70)
 print("📂 LOADING DATA")
 print("=" * 70)
@@ -40,9 +36,7 @@ print(f"   Features: {X_test.shape[1]}")
 print(f"   Fraud cases: {sum(y_test == 1)} ({sum(y_test == 1)/len(y_test)*100:.2f}%)")
 print(f"   Normal cases: {sum(y_test == 0)} ({sum(y_test == 0)/len(y_test)*100:.2f}%)")
 
-# ============================================
-# PART 2: TRAIN ISOLATION FOREST
-# ============================================
+
 print("\n" + "=" * 70)
 print("🌲 TRAINING ISOLATION FOREST (UNSUPERVISED)")
 print("=" * 70)
@@ -68,9 +62,7 @@ print("\n⏳ Training Isolation Forest...")
 iso_forest.fit(X_test)
 print("✅ Training complete!")
 
-# ============================================
-# PART 3: MAKE PREDICTIONS
-# ============================================
+
 print("\n" + "=" * 70)
 print("🔮 MAKING PREDICTIONS")
 print("=" * 70)
@@ -88,9 +80,7 @@ print(f"✅ Predictions complete!")
 print(f"   Flagged as fraud: {sum(iso_predictions_binary == 1)}")
 print(f"   Flagged as normal: {sum(iso_predictions_binary == 0)}")
 
-# ============================================
-# PART 4: EVALUATE PERFORMANCE
-# ============================================
+
 print("\n" + "=" * 70)
 print("📊 ISOLATION FOREST PERFORMANCE")
 print("=" * 70)
@@ -114,9 +104,7 @@ print(f"              Normal  Fraud")
 print(f"Actual Normal  {cm_iso[0,0]:5d}  {cm_iso[0,1]:5d}")
 print(f"       Fraud   {cm_iso[1,0]:5d}  {cm_iso[1,1]:5d}")
 
-# ============================================
-# PART 5: COMPARE WITH SUPERVISED MODEL
-# ============================================
+
 print("\n" + "=" * 70)
 print("⚖️ COMPARISON: SUPERVISED VS UNSUPERVISED")
 print("=" * 70)
