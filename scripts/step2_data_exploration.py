@@ -4,13 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# ============================================
-# SET UP FOLDER PATHS
-# ============================================
-# Get the base directory (brocode folder)
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Define folder paths
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 PROCESSED_DIR = os.path.join(BASE_DIR, 'processed_data')
 VIZ_DIR = os.path.join(BASE_DIR, 'visualizations')
@@ -20,21 +16,16 @@ print("CHAINGUARD - STEP 2: DATA EXPLORATION")
 print("=" * 60)
 print(f"\n📁 Working directory: {BASE_DIR}")
 
-# ============================================
-# PART 1: LOAD THE DATA
-# ============================================
+
 print("\n📂 Loading dataset files from data/ folder...")
 
-# Load all 3 files from data/ folder
 features = pd.read_csv(os.path.join(DATA_DIR, 'elliptic_txs_features.csv'), header=None)
 classes = pd.read_csv(os.path.join(DATA_DIR, 'elliptic_txs_classes.csv'))
 edges = pd.read_csv(os.path.join(DATA_DIR, 'elliptic_txs_edgelist.csv'))
 
 print("✅ Files loaded successfully!\n")
 
-# ============================================
-# PART 2: UNDERSTAND FEATURES FILE
-# ============================================
+
 print("=" * 60)
 print("📊 FEATURES FILE ANALYSIS")
 print("=" * 60)
@@ -49,9 +40,7 @@ print(features.head())
 print("\n📌 Column 0 is Transaction ID")
 print("📌 Columns 1-166 are anonymous features (amounts, timestamps, etc.)")
 
-# ============================================
-# PART 3: UNDERSTAND CLASSES FILE (LABELS)
-# ============================================
+
 print("\n" + "=" * 60)
 print("🏷️  CLASSES FILE ANALYSIS (These are our labels!)")
 print("=" * 60)
@@ -62,7 +51,6 @@ print(classes.head(10))
 print("\n📊 Class Distribution:")
 print(classes['class'].value_counts())
 
-# Calculate percentages
 class_counts = classes['class'].value_counts()
 total = len(classes)
 print("\n📈 Percentages:")
@@ -89,9 +77,7 @@ print(f"\nMerged data shape: {data.shape}")
 print("\nFirst few rows with labels:")
 print(data[[0, 'class']].head(10))
 
-# ============================================
-# PART 5: CLEAN THE DATA
-# ============================================
+
 print("\n" + "=" * 60)
 print("🧹 DATA CLEANING")
 print("=" * 60)
@@ -119,9 +105,7 @@ print(f"\n🎯 Key Insight:")
 print(f"  Fraud rate: {fraud_pct:.2f}%")
 print(f"  This is an IMBALANCED dataset! ⚖️")
 
-# ============================================
-# PART 6: VISUALIZE THE DATA
-# ============================================
+
 print("\n" + "=" * 60)
 print("📊 CREATING VISUALIZATIONS")
 print("=" * 60)
@@ -172,9 +156,7 @@ viz_path = os.path.join(VIZ_DIR, 'data_exploration.png')
 plt.savefig(viz_path, dpi=300, bbox_inches='tight')
 print(f"✅ Saved visualization: {viz_path}")
 
-# ============================================
-# PART 7: PREPARE DATA FOR MODEL
-# ============================================
+
 print("\n" + "=" * 60)
 print("💾 PREPARING DATA FOR MODEL TRAINING")
 print("=" * 60)
@@ -197,9 +179,7 @@ print("\n💾 Saved files:")
 print(f"  → {X_path}")
 print(f"  → {y_path}")
 
-# ============================================
-# PART 8: SUMMARY STATISTICS
-# ============================================
+
 print("\n" + "=" * 60)
 print("📋 FINAL SUMMARY")
 print("=" * 60)
